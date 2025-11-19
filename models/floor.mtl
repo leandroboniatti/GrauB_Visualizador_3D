@@ -1,0 +1,8 @@
+# Material para floor.obj
+
+newmtl FloorMaterial
+Ka 0.2 0.2 0.2
+Kd 0.8 0.8 0.8
+Ks 0.3 0.3 0.3
+Ns 8.0
+map_Kd ../textures/woodTexture.jpg

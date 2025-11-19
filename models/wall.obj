@@ -1,0 +1,28 @@
+# Parede simples para teste - wall.obj
+# 4 vertices para formar parede vertical
+
+mtllib wall.mtl
+
+# Vértices da parede (plano vertical)
+v -1.0 -1.0  0.0
+v  1.0 -1.0  0.0
+v  1.0  1.0  0.0
+v -1.0  1.0  0.0
+
+# Coordenadas de textura
+vt 0.0 0.0
+vt 1.0 0.0
+vt 1.0 1.0
+vt 0.0 1.0
+
+# Normal (apontando para frente)
+vn 0.0 0.0 1.0
+
+usemtl WallMaterial
+
+# Uma única face
+# f 1/1/1 2/2/1 3/3/1 4/4/1
+
+# duas faces triangulares
+f 1/1/1 2/2/1 3/3/1
+f 1/1/1 3/3/1 4/4/1

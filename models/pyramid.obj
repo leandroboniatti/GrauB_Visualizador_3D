@@ -1,0 +1,38 @@
+# Pirâmide simples para debug
+# pyramid.obj
+
+mtllib pyramid.mtl
+
+# Vértices
+v 0.0 1.0 0.0    # Topo
+v -1.0 0.0 1.0   # Base frente esquerda
+v 1.0 0.0 1.0    # Base frente direita
+v 1.0 0.0 -1.0   # Base trás direita  
+v -1.0 0.0 -1.0  # Base trás esquerda
+
+# Coordenadas de textura
+vt 0.5 1.0   # Topo
+vt 0.0 0.0   # Base esquerda
+vt 1.0 0.0   # Base direita
+vt 1.0 1.0   # Outro ponto
+vt 0.0 1.0   # Outro ponto
+
+# Normais
+vn 0.0 1.0 0.0     # Topo
+vn 0.0 -1.0 0.0    # Base
+vn -0.5 0.5 0.5    # Face esquerda
+vn 0.5 0.5 0.5     # Face direita
+vn 0.5 0.5 -0.5    # Face trás
+vn -0.5 0.5 -0.5   # Face esquerda trás
+
+usemtl PyramidMaterial
+
+# Faces laterais
+f 1/1/1 2/2/3 3/3/4
+f 1/1/1 3/3/4 4/4/5
+f 1/1/1 4/4/5 5/5/6
+f 1/1/1 5/5/6 2/2/3
+
+# Base (duas faces triangulares)
+f 2/2/2 5/5/2 4/4/2
+f 2/2/2 4/4/2 3/3/2

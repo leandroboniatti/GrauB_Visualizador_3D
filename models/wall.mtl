@@ -1,0 +1,8 @@
+# Material para wall.obj
+
+newmtl WallMaterial
+Ka 0.3 0.3 0.3
+Kd 0.7 0.7 0.7
+Ks 0.5 0.5 0.5
+Ns 16.0
+map_Kd ../textures/pixelWall.png

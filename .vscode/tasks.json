@@ -1,0 +1,51 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Visualizador 3D",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-std=c++17",
+                //"-Wall",
+                //"-Wextra",
+                //"-O2",
+                "-g",
+                // Aqui você inclui os diretórios que contém os cabeçalhos
+                "-Iinclude",
+                "-IDependencies/GLAD/include",
+                "-IDependencies/GLFW/include",
+                "-IDependencies/glm",
+                "-IDependencies/stb_image",
+                // Aqui você inclui o caminho para os arquivos fonte (.c ou .cpp) (sources)
+                "main.cpp",
+                "src/Face.cpp",
+                "src/Texture.cpp",
+                "src/Group.cpp",
+                "src/Shader.cpp",
+                "src/OBJReader.cpp",
+                "src/Mesh.cpp",
+                "src/Object3D.cpp",
+                "src/Camera.cpp",
+                "src/Projetil.cpp",
+                "src/System.cpp",
+                "Dependencies/GLAD/src/glad.c",
+                "Dependencies/stb_image/stb_image.cpp",
+                // Aqui você inclui o diretório que possui as bibliotecas estáticas
+                "-LDependencies/GLFW/lib-mingw-w64",
+                // Aqui você inclui o nome das biblioteca estáticas (.lib ou .a), com -l na frente
+                "-lglfw3",
+                "-lopengl32",
+                "-lgdi32",
+                "-luser32",
+                "-lkernel32",
+                "-o",
+                "visualizador3d.exe"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build"
+        },
+    ]
+}

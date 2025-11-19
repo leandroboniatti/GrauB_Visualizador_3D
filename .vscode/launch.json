@@ -1,0 +1,45 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Visualizador 3D",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/visualizador3d.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "c:\\msys64\\ucrt64\\bin\\gdb.exe",
+            "setupCommands": [
+                {
+                    "description": "Habilitar formatação bonita para gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Definir modo de desmontagem como Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "Build Visualizador 3D"
+        },
+        {
+            "name": "Run Visualizador 3D",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/visualizador3d.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "c:\\msys64\\ucrt64\\bin\\gdb.exe",
+            "preLaunchTask": "Build Visualizador 3D"
+        }
+    ]
+}

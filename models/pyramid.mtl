@@ -1,0 +1,8 @@
+# Material para pyramid.obj
+
+newmtl PyramidMaterial
+Ka 0.8 0.2 0.2
+Kd 1.0 0.6 0.6
+Ks 1.0 1.0 1.0
+Ns 32.0
+map_Kd ../textures/gold.png

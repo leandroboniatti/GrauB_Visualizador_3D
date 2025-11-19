@@ -1,0 +1,13 @@
+# Blender 4.2.2 LTS MTL File: 'muscle_car_cgtrader.blend'
+# www.blender.org
+
+newmtl Material_Nova
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.700000
+d 1.000000
+illum 2
+map_Kd ../textures/Color.jpg
+map_Ns ../textures/Roughness.jpg
+map_refl ../textures/Metalness.jpg
