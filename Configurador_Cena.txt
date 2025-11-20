@@ -5,7 +5,7 @@
 # Nome Path posX posY posZ rotX rotY rotZ scaleX scaleY scaleZ eliminável textura(path)
 
 # Objetos eliminables (alvos)
-Car models/car.obj     -4.0 0.0 -2.0 0.0 0.000 0.0 1.0 1.0 1.0 1
+Car models/X6GN0BP7717ABESOCHWNDHZV4.obj     -4.0 0.0 -2.0 0.0 0.000 0.0 1.0 1.0 1.0 1
 #Target1 models/cube.obj     -4.0 0.0 -2.0 0.0 0.000 0.0 1.0 1.0 1.0 1
 #Target2 models/pyramid.obj   4.0 0.0 -2.0 0.0 0.785 0.0 1.0 1.0 1.0 1
 #Target3 models/icosaedro.obj    0.0 2.0 -4.0 0.0 0.000 0.0 0.8 0.8 0.8 1
@@ -13,8 +13,8 @@ Car models/car.obj     -4.0 0.0 -2.0 0.0 0.000 0.0 1.0 1.0 1.0 1
 # Objetos não eliminables (obstáculos)
 #Wall1 models/wall.obj  -5.0  2.0 -6.0 0.0 0.0 0.0  1.0 3.0  1.0 0
 #Wall2 models/wall.obj   5.0  2.0 -6.0 0.0 0.0 0.0  1.0 3.0  1.0 0
-Floor models/floor.obj  0.0 -1.0  0.0 0.0 0.0 0.0 10.0 0.1 10.0 0
+#Floor models/floor.obj  0.0 -1.0  0.0 0.0 0.0 0.0 10.0 0.1 10.0 0
 
 # Obstáculos refletores
-Mirror1 models/cube.obj -1.5 1.0 -1.0 0.0 0.0 0.0 0.5 2.0 0.1 0
-Mirror2 models/cube.obj  1.5 1.0 -1.0 0.0 0.0 0.0 0.5 2.0 0.1 0
+#Mirror1 models/cube.obj -1.5 1.0 -1.0 0.0 0.0 0.0 0.5 2.0 0.1 0
+#Mirror2 models/cube.obj  1.5 1.0 -1.0 0.0 0.0 0.0 0.5 2.0 0.1 0
