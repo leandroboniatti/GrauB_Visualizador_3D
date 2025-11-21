@@ -3,26 +3,23 @@
 /***          Visualizador de Modelos 3D com OpenGL 4+            ***/
 /***        Alunos: Ian Rossetti Boniatti e Eduardo Tropea        ***/
 
-/***  v:	***/
-
 /*** Fontes:
+                * GRAU A de Fundamentos de CGR
                 * GRAU B de Fundamentos de CG
                 * Exemplo SaberThoot
                 * UML dos slides "Modelagem 3D"
                 * pseudos códigos dos slides de CGR
                 * learnopengl.com
+                * Exemplos da internet
 ***/
 
-
-// Internal
 #include <iostream>
 #include "System.h"
 
 using namespace std;
 
 int main() {
-    cout << "    Visualizador de Modelos 3D - CGR    " << endl;
-    cout << endl;
+    cout << "    Visualizador de Modelos 3D - CGR    " << endl;    cout << endl;
 
     System system;  // Instancia o sistema (janela, OpenGL, Shaders, cena, etc)
 
@@ -48,7 +45,7 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    cout << "Sistema inicializado com sucesso" << endl;
+    cout << "Sistema inicializado com sucesso" << endl;    cout << endl;
 
     cout << "Controles:" << endl;
     cout << "  WASD/Setas: Mover camera" << endl;
@@ -56,6 +53,7 @@ int main() {
     cout << "  Scroll: Zoom" << endl;
     cout << "  ESPAÇO: Atirar" << endl;
     cout << "  ESC: Sair" << endl;
+    cout << endl;
 
     // Main loop - game loop
     while (!glfwWindowShouldClose(system.window)) {

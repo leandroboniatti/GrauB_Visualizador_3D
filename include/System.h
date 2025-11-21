@@ -89,7 +89,6 @@ public:
     vector<unique_ptr<Projetil>> projeteis;
     
     // Entrada
-    bool keys[1024];
     bool firstMouse;
     float lastX, lastY;
 
@@ -104,6 +103,7 @@ public:
     static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
     
     // Funções auxiliares
+    void loadSystemConfiguration();
     vector<ObjectInfo> readFileConfiguration();
 };
 

@@ -9,8 +9,10 @@ static System* systemInstance = nullptr;
 static bool tiroDisparado = false;
 static bool fogTogglePressed = false;
 
+// Grau B - Carrega configurações do sistema a partir do arquivo "Configurador_Sistema.txt"
+// Configurações de camera, iluminação e fog podem ser ajustadas neste arquivo sem a necessidade de recompilar o código
 System::System() : window(nullptr), 
-                   camera(vec3(0.0f, 2.0f, 20.0f)),
+                   camera(vec3(0.0f, 2.0f, 20.0f)), // valores padrão, serão sobrescritos
                    deltaTime(0.0f),
                    lastFrame(0.0f),
                    firstMouse(true),
@@ -21,17 +23,17 @@ System::System() : window(nullptr),
                    attConstant(1.0f),
                    attLinear(0.045f),
                    attQuadratic(0.0075f),
-                   fogColor(0.9f, 0.9f, 0.9f), // cinza claro
-                   fogDensity(0.05f),          // densidade do fog
+                   fogColor(0.9f, 0.9f, 0.9f),
+                   fogDensity(0.05f),
                    fogStart(10.0f),
                    fogEnd(50.0f),
-                   fogType(1),  // 0=linear, 1=exponencial, 2=exponencial²
-                   fogEnabled(true) // fog inicialmente ligado
+                   fogType(1),
+                   fogEnabled(true)
 {
     systemInstance = this;
-
-    // Inicializando o array de controle das teclas
-    for (int i = 0; i < 1024; i++) { keys[i] = false; }
+    
+    // Carrega configurações do sistema a partir do arquivo configurador de cena
+    loadSystemConfiguration();
 }
 
 
@@ -301,6 +303,52 @@ bool System::loadSceneObjects() {
 }
 
 
+// Carrega configurações do sistema (câmera, luz, fog) do arquivo de configuração
+void System::loadSystemConfiguration() {
+    ifstream configFile("Configurador_Cena.txt");
+    if (!configFile.is_open()) {
+        cerr << "Aviso: Não foi possível abrir Configurador_Cena.txt para configurações do sistema" << endl;
+        return;
+    }
+    
+    string line;
+    while (getline(configFile, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        
+        istringstream sline(line);
+        string keyword;
+        sline >> keyword;
+        
+        if (keyword == "CAMERA") {
+            vec3 cameraPos;
+            sline >> cameraPos.x >> cameraPos.y >> cameraPos.z;
+            camera.Position = cameraPos;
+            cout << "Camera configurada: (" << cameraPos.x << ", " << cameraPos.y << ", " << cameraPos.z << ")" << endl;
+        }
+        else if (keyword == "LIGHT") {
+            sline >> lightPos.x >> lightPos.y >> lightPos.z
+                  >> lightColor.x >> lightColor.y >> lightColor.z;
+            cout << "Luz configurada - Pos: (" << lightPos.x << ", " << lightPos.y << ", " << lightPos.z << ")";
+            cout << " Color: (" << lightColor.x << ", " << lightColor.y << ", " << lightColor.z << ")" << endl;
+        }
+        else if (keyword == "ATTENUATION") {
+            sline >> attConstant >> attLinear >> attQuadratic;
+            cout << "Atenuação configurada: (" << attConstant << ", " << attLinear << ", " << attQuadratic << ")" << endl;
+        }
+        else if (keyword == "FOG") {
+            int enabled;
+            sline >> enabled >> fogColor.x >> fogColor.y >> fogColor.z
+                  >> fogDensity >> fogStart >> fogEnd >> fogType;
+            fogEnabled = (enabled == 1);
+            cout << "Fog configurado - Enabled: " << (fogEnabled ? "Sim" : "Não")
+                 << " Type: " << fogType << " Density: " << fogDensity << endl;
+        }
+    }
+    
+    configFile.close();
+}
+
+
 // Carrega as informações gerais dos objetos da cena a partir do arquivo de configuração da cena - "Configurador_Cena.txt"
 // No Grau A era: (Nome Path posX posY posZ rotX rotY rotZ scaleX scaleY scaleZ Eliminável(S/N) TexturePath)
 // Agora no Grau B ficou: (Nome Path posX posY posZ rotX rotY rotZ scaleX scaleY scaleZ Eliminável(S/N))
@@ -316,6 +364,15 @@ vector<ObjectInfo> System::readFileConfiguration() {
 
     while (getline(configFile, line)) { // loop para processar cada linha do arquivo de configuração
         if (line.empty() || line[0] == '#') continue; // Ignora linhas vazias ou comentários
+        
+        // Ignora linhas de configuração do sistema
+        istringstream checkLine(line);
+        string firstWord;
+        checkLine >> firstWord;
+        if (firstWord == "CAMERA" || firstWord == "LIGHT" || 
+            firstWord == "ATTENUATION" || firstWord == "FOG") {
+            continue;
+        }
 
         // Nome Path posX posY posZ rotX rotY rotZ scaleX scaleY scaleZ eliminável
         istringstream sline(line);  // Cria um stream (sline) a partir da linha lida
@@ -496,19 +553,6 @@ void System::mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 void System::scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     if (systemInstance) {
         systemInstance->camera.ProcessMouseScroll(yoffset);
-    }
-}
-
-
-// key_callback para controle de teclas
-void System::key_callback(GLFWwindow* window, int key, int scancode, int action, int mode) {
-    if (!systemInstance) return;
-    
-    if (key >= 0 && key < 1024) {
-        if (action == GLFW_PRESS)
-            systemInstance->keys[key] = true;
-        else if (action == GLFW_RELEASE)
-            systemInstance->keys[key] = false;
     }
 }
 
