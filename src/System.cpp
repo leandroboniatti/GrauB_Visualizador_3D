@@ -77,7 +77,6 @@ bool System::initializeGLFW() {
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback); // Ajusta a viewport quando a janela é redimensionada
     glfwSetCursorPosCallback(window, mouse_callback);   // Captura a posição do mouse
     glfwSetScrollCallback(window, scroll_callback); // Captura o scroll do mouse
-    glfwSetKeyCallback(window, key_callback);   // Captura eventos do teclado
     
     // Capturar mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
