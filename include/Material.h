@@ -7,8 +7,9 @@
 using namespace std;
 using namespace glm;
 
-// Estrutura para representar um material MTL
-struct Material {
+// Classe para representar um material MTL
+class Material {
+public:
     string name;      // Nome do material (identificador)
     vec3 Ka;          // Coeficiente de reflexão ambiente (Ambient)
     vec3 Kd;          // Coeficiente de reflexão difusa (Diffuse)
