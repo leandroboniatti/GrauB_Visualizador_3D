@@ -25,7 +25,8 @@ void Projetil::update(float deltaTime) {
     position += direction * speed * deltaTime;
     lifetime += deltaTime;
     
-    if (lifetime >= maxLifetime) {
+    // Desativa projétil se atingir o chão (Y <= 0) ou tempo máximo
+    if (lifetime >= maxLifetime || position.y <= 0.0f) {
         active = false;
     }
 }

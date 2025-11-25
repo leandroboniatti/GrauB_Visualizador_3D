@@ -1,6 +1,6 @@
 # Blender 4.2.2 LTS
 # www.blender.org
-mtllib car.mtl
+mtllib models/car.mtl
 o WheelLF
 v 0.964148 0.391350 1.772180
 v 0.964148 0.315425 1.779658

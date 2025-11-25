@@ -23,9 +23,7 @@ public:
                         map<string, Material>& materials);
     
     // Lê um arquivo MTL e preenche o mapa de materiais fornecido por referência
-    static bool readFileMTL(const string& path,
-                        map<string, Material>& materials,
-                        const string& objDirectory);
+    static bool readFileMTL(const string& path, map<string, Material>& materials);
     
     // Divide uma string em substrings com base em um delimitador
     static vector<string> split(const string& str, char delimiter);

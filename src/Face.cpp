@@ -3,12 +3,13 @@
 Face::Face() {}
 
 // Construtor recebe por referência os índices dos vértices, texturas e normais
-// armazenando cópias locais nos parametros da classe (vIndices, tIndices, nIndices)
+// armazenando cópias locais nos parametros da classe (vertexIndices, textureIndices, normalIndices)
 Face::Face(const vector<unsigned int>& vIndices, 
            const vector<unsigned int>& tIndices,
            const vector<unsigned int>& nIndices) :  vertexIndices (vIndices),  // lista de inicializadores
-                                                         textureIndices(tIndices),  // dos parâmetros
-                                                         normalIndices (nIndices) { }
+                                                    textureIndices(tIndices),  // dos parâmetros
+                                                    normalIndices (nIndices) { }
+
 
 // Converte face com 4 ou mais vértices em triângulos usando "fan triangulation" - mais simples - 
 vector<Face> Face::triangulate() const {

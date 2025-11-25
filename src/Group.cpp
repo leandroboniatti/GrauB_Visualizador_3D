@@ -122,6 +122,7 @@ void Group::setupBuffers(const vector<vec3>& objVertices,      // recebe referê
     glBindVertexArray(0); // Desvincula o VAO do grupo
 
     cout << "Grupo \"" << name << "\" configurado com VBO = " << VBO << " e VAO = " << VAO << endl;
+    cout << endl;
 }
 
 
@@ -154,7 +155,8 @@ void Group::render(const Shader& shader) const {    // No Grau A era void Group:
 }
 
 
-// Limpa os buffers OpenGL do grupo - VBO, VAO e textureID
+// Limpa os buffers OpenGL do grupo - VBO, VAO
+// Nota: textureID não é deletado aqui pois pode estar em cache e ser usado por outros grupos
 void Group::cleanup() {
     if (VAO != 0) {
         glDeleteVertexArrays(1, &VAO);
@@ -164,10 +166,7 @@ void Group::cleanup() {
         glDeleteBuffers(1, &VBO);
         VBO = 0;
     }
-    if (textureID != 0) {
-        glDeleteTextures(1, &textureID);
-        textureID = 0;
-    }
+    // textureID é gerenciado pelo cache em Texture::clearCache()
 }
 
 
@@ -181,7 +180,7 @@ void Group::loadMaterialTexture(const string& mtlDirectory) {
         textureID = Texture::loadTexture(texturePath);
         
         if (textureID != 0) {
-            cout << "Textura com ID = " << textureID << " carregada do arquivo MTL para o grupo \"" << name << "\": " << texturePath << endl;
+            cout << "Textura vinculada ao grupo \"" << name << "\" (ID: " << textureID << ")" << endl;
         } else {
             cerr << "Falha ao carregar textura do arquivo MTL para o grupo \"" << name << "\": " << texturePath << endl;
         }

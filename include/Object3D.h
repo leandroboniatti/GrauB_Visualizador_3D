@@ -13,7 +13,7 @@ using namespace glm;
 
 class Object3D {
 public:
-    Mesh mesh;  // malha do objeto 3D
+    Mesh mesh;         // malha do objeto 3D
     mat4 transform;    // matriz de transformação do objeto (model matrix)
     vec3 position;     // posição do objeto
     vec3 rotation;     // ângulos de rotação do objeto (em radianos)
@@ -22,6 +22,13 @@ public:
     bool eliminable;
     string name;
     //, modelPath, texturePath;
+    
+    // Animation support
+    vector<vec3> animationPoints;   // Pontos da curva de animação
+    int currentCurveIndex;          // Índice atual na curva
+    float curveProgress;            // Progresso fracionário entre pontos
+    bool isAnimated;          // Flag para indicar se o objeto está animado
+    float animationSpeed;     // Velocidade da animação (pontos por update)
     
     // Texture support
     //unsigned int textureID;
@@ -34,7 +41,7 @@ public:
     ~Object3D();
 
     // Carrega um objeto 3D a partir de um arquivo
-    bool loadObject(string& path);
+    bool loadObject(string& objFilePath);
 
     // Renderiza o objeto 3D usando o shader fornecido
     void render(const Shader& shader) const;
@@ -46,10 +53,15 @@ public:
     void setEliminable(bool canEliminate);
    // void setTexture(const string& texturePath);
 
-    vec3 getPosition() const { return position; }
-    vec3 getRotation() const { return rotation; }
-    vec3 getScale() const { return scale; }
     bool isEliminable() const { return eliminable; }
+
+    // Animation methods
+    bool loadAnimationCurve(const string& curveFilePath, 
+                           const vec3& trackPosition = vec3(0.0f),
+                           const vec3& trackRotation = vec3(0.0f),
+                           const vec3& trackScale = vec3(1.0f));
+    void updateAnimation(float deltaTime);
+    void setAnimationSpeed(float speed);
 
     BoundingBox getTransformedBoundingBox() const;
 

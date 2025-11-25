@@ -94,6 +94,7 @@ public:
 
     void disparo();
     void updateProjeteis();
+    void updateAnimations();
     void checkCollisions();
     
     // Callbacks
@@ -102,8 +103,11 @@ public:
     static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
     
     // Funções auxiliares
-    void loadSystemConfiguration();
-    vector<ObjectInfo> readFileConfiguration();
+    // Carrega configurações do sistema (câmera, luz, fog) do arquivo de configuração "Configurador_Cena.txt"
+    bool loadSystemConfiguration();
+
+    // Lê o arquivo de configuração dos objetos da cena e retorna um vetor de ObjectInfo
+    vector<ObjectInfo> readObjectsInfos();
 };
 
 #endif

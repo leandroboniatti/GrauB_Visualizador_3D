@@ -1,0 +1,155 @@
+@startuml GrauB_Visualizador3D
+!theme plain
+skinparam dpi 150
+skinparam classAttributeIconSize 0
+skinparam backgroundColor white
+skinparam defaultFontSize 10
+skinparam classBackgroundColor white
+skinparam classBorderColor black
+skinparam arrowColor black
+skinparam noteBackgroundColor #F5F5F5
+skinparam noteBorderColor #CCCCCC
+
+' ====== CLASSE PRINCIPAL ======
+class System {
+  - window: GLFWwindow*
+  - camera: Camera
+  - mainShader: Shader
+  - sceneObjects: vector<Object3D>
+  - projeteis: vector<Projetil>
+  - lightPos: vec3
+  - lightColor: vec3
+  - fogEnabled: bool
+  --
+  + initializeGLFW(): bool
+  + initializeOpenGL(): bool
+  + loadShaders(): bool
+  + loadSceneObjects(): bool
+  + processInput(): void
+  + render(): void
+  + disparo(): void
+}
+
+' ====== RENDERIZAÇÃO ======
+class Shader {
+  + ID: unsigned int
+  --
+  + use(): void
+  + loadFromStrings(): bool
+}
+
+' ====== FÍSICA ======
+class Projetil {
+  + position: vec3
+  + direction: vec3
+  + speed: float
+  --
+  + update(deltaTime): void
+  + draw(shader): void
+  + isActive(): bool
+}
+
+class Camera {
+  + Position: vec3
+  + Front: vec3
+  + Up: vec3
+  --
+  + ProcessKeyboard(): void
+  + ProcessMouseMovement(): void
+  + GetViewMatrix(): mat4
+}
+
+' ====== OBJETOS 3D ======
+class Object3D {
+  + name: string
+  - position: vec3
+  - rotation: vec3
+  - scale: vec3
+  - mesh: Mesh
+  --
+  + loadObject(path): bool
+  + render(shader): void
+  + setPosition(): void
+}
+
+class Mesh {
+  - groups: vector<Group>
+  --
+  + addGroup(): void
+  + render(): void
+}
+
+class Group {
+  - VAO, VBO: unsigned int
+  - material: Material
+  - textureID: unsigned int
+  - faces: vector<Face>
+  --
+  + setupBuffers(): void
+  + loadMaterialTexture(): void
+  + render(): void
+}
+
+class Face {
+  + vertexIndices: vector<int>
+  + textureIndices: vector<int>
+  + normalIndices: vector<int>
+  --
+  + addVertex(): void
+}
+
+class Material {
+  + Ka: vec3
+  + Kd: vec3
+  + Ks: vec3
+  + Ns: float
+  + map_Kd: string
+}
+
+' ====== CARREGAMENTO ======
+class OBJReader {
+  {static} + loadOBJ(path): Mesh
+  {static} - parseMTL(path): map<Material>
+}
+
+class Texture {
+  {static} + loadTexture(path): unsigned int
+}
+
+' ====== RELACIONAMENTOS ======
+System "1" *-- "*" Projetil : gerencia
+System "1" *-- "1" Shader : usa
+System "1" *-- "1" Camera : contém
+
+System "1" *-right- "*" Object3D : gerencia
+Object3D "1" *-down- "1" Mesh : possui
+Mesh "1" *-down- "*" Group : divide em
+Group "1" *-left- "1" Material : aplica
+Group "1" *-down- "*" Face : composto de
+
+OBJReader ..> Mesh : <<cria>>
+OBJReader ..> Material : <<parseia>>
+Texture ..> Group : <<carrega>>
+
+note left of System
+  **Classe Central**
+  Gerencia janela, entrada,
+  renderização e game loop
+end note
+
+note top of Object3D
+  **Hierarquia de Objetos**
+  Object3D → Mesh → Group → Face
+  Cada Group tem Material + Textura
+  Face define triângulos (índices)
+end note
+
+note bottom of Material
+  **Modelo de Phong**
+  Ka: Ambiente
+  Kd: Difuso
+  Ks: Especular
+  Ns: Shininess
+end note
+
+@enduml

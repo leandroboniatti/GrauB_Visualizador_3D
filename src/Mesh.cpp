@@ -5,50 +5,44 @@
 #include <algorithm>
 #include <cfloat>
 
+
 Mesh::Mesh() {}
 
-Mesh::~Mesh() {
-    cleanup();
-}
 
-bool Mesh::readObjectModel(string& path) {
+Mesh::~Mesh() { cleanup(); }
+
+
+// Carrega dados do OBJ chamando OBJReader::readFileOBJ, método da classe OBJReader.
+// lembrando a sequência de chamadas:
+// System::loadSceneObjects -> Object3D::loadObject -> Mesh::readObjectModel -> OBJReader::readFileOBJ
+bool Mesh::readObjectModel(string& objFilePath) {
     
-    // Carrega dados do OBJ chamando OBJReader::readFileOBJ, método da classe OBJReader.
-    // Este, por sua vez, preenche os vetores e mapas passados por referência.
-    // path - caminho do arquivo, recebido como parâmetro
-    // vertices - vetor com os vértices do modelo, no formato VEC3, definido aqui na classe Mesh
+    // "OBJReader::readFileOBJ" preenche os vetores e mapas da malha (Mesh), passados por referência:
+    // vertices  - vetor com os vértices do modelo, no formato VEC3, definido aqui na classe Mesh
     // texCoords - vetor com as coordenadas de textura, no formato VEC2, definido aqui na classe Mesh
-    // normals - vetor com as normais de cada face no formato VEC3, definido aqui na classe Mesh
-    // groups - grupo de grupos - vetor com os grupos, definido aqui na classe Mesh
-    // materials - mapa de materiais do arquivo MTL, definido aqui na classe Mesh
+    // normals   - vetor com as normais de cada face no formato VEC3, definido aqui na classe Mesh
+    // groups    - grupo de grupos - vetor com os grupos, definido aqui na classe Mesh
+    // materials - mapa de materiais originado do arquivo MTL, definido aqui na classe Mesh
 
-    if (!OBJReader::readFileOBJ(path, vertices, texCoords, normals, groups, materials)) {
-        return false;
-    }
+    // objFilePath - caminho do arquivo do modelo (OBJ), recebido como parâmetro
+
+    bool leuArquivoOBJ = OBJReader::readFileOBJ(objFilePath, vertices, texCoords, normals, groups, materials);
+
+    if (!leuArquivoOBJ) { return false; } // se não leu o arquivo OBJ, retorna falso
 
     // Extrai o diretório do modelo para carregar texturas
-    size_t pos = path.find_last_of("/\\\\");
-    string modelDirectory = (pos != string::npos) ? path.substr(0, pos) : ".";
+    size_t pos = objFilePath.find_last_of("/\\\\");
+    string modelDirectory = (pos != string::npos) ? objFilePath.substr(0, pos) : ".";
 
-    // Calcula a bounding box do modelo/objeto
-    calculateBoundingBox();
-
-    setupBuffers(); // Configura os buffers OpenGL (VBOs, VAOs) para cada grupo da malha
-
-    // Carrega as texturas dos materiais MTL para cada grupo
+    // Carrega as texturas e configura os buffers OpenGL para cada grupo
     for (auto& group : groups) {
-        group.loadMaterialTexture(modelDirectory);
+        group.loadMaterialTexture(modelDirectory);  // Carrega as texturas dos materiais MTL para cada grupo
+        group.setupBuffers(vertices, texCoords, normals); // Configura os buffers OpenGL (VBOs, VAOs) para cada grupo da malha
     }
 
+    calculateBoundingBox(); // Calcula a bounding box do objeto
+
     return true;
-}
-
-
-// Configura buffers OpenGL (VBOs, VAOs) para cada grupo da malha
-void Mesh::setupBuffers() {
-    for (auto& group : groups) { group.setupBuffers(vertices, texCoords, normals);}
-
-    cout << "Buffers OpenGL configurados" << endl;
 }
 
 
@@ -74,16 +68,12 @@ void Mesh::cleanup() {
 
 // Calcula a bounding box do modelo/objeto
 void Mesh::calculateBoundingBox() {
-    boundingBox = BoundingBox();
+
+    boundingBox = BoundingBox();    // inicializa a bounding box com valores extremos FLT_MAX e -FLT_MAX
     
-    for (const auto& vertex : vertices) {
-        boundingBox.expand(vertex);
-    }
-    
-    //cout << "Bounding box calculated: min(" << boundingBox.min.x << ", " 
-    //          << boundingBox.min.y << ", " << boundingBox.min.z << "), max(" 
-    //         << boundingBox.max.x << ", " << boundingBox.max.y << ", " 
-    //          << boundingBox.max.z << ")" << endl;
+    for (const auto& vertice : vertices) {
+        boundingBox.expand(vertice); // chama método expand da BoundingBox que atualiza os pontos mínimo e máximo
+    }                                // testando se o vertice informado é menor ou maior que os atuais
 }
 
 
@@ -106,11 +96,4 @@ bool Mesh::rayIntersect(const vec3& rayOrigin, const vec3& rayDirection, float& 
     
     distance = tNear > 0.0f ? tNear : tFar;
     return true;
-}
-
-// Calcula a normal de uma face dada pelos três vértices (v0, v1, v2)
-vec3 Mesh::calculateFaceNormal(const vec3& v0, const vec3& v1, const vec3& v2) const {
-    vec3 edge1 = v1 - v0;
-    vec3 edge2 = v2 - v0;
-    return normalize(cross(edge1, edge2));
 }

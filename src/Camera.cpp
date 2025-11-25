@@ -10,10 +10,10 @@ Camera::Camera(vec3 position, vec3 up, float yaw, float pitch)
     updateCameraVectors();
 }
 
+
 // retorna a matriz de visualização usando a função lookAt do GLM
-mat4 Camera::GetViewMatrix() {
-    return lookAt(Position, Position + Front, Up);
-}
+mat4 Camera::GetViewMatrix() { return lookAt(Position, Position + Front, Up); }
+
 
 // processa o input recebido do teclado, movendo a câmera de acordo com a direção e a velocidade do movimento 
 void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime) {

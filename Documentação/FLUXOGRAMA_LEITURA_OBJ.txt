@@ -1,0 +1,530 @@
+================================================================================
+                     FLUXOGRAMA: LEITURA .OBJ ATÉ FORMAÇÃO DAS FACES
+                         Sistema de Visualização 3D - Grau B
+================================================================================
+
+1. INÍCIO - CARREGAMENTO DA CENA
+================================================================================
+
+main.cpp
+  └─> system.loadSceneObjects()
+
+System.cpp :: loadSceneObjects()
+  │
+  ├─> readFileConfiguration() → Lê "Configurador_Cena.txt"
+  │   └─> Retorna vector<ObjectInfo>
+  │       - nome, modelPath, position, rotation, scale, eliminable
+  │
+  └─> Para cada ObjectInfo no vetor:
+      │
+      ├─> Cria Object3D(name)
+      │   └─> Object3D.cpp :: Constructor
+      │       - Inicializa transform, position, rotation, scale
+      │       - Chama updateTransform()
+      │
+      └─> Object3D.cpp :: loadObject(modelPath)
+          └─> Mesh.cpp :: readObjectModel(path)
+
+
+2. LEITURA DO ARQUIVO .OBJ
+================================================================================
+
+OBJReader.cpp :: readFileOBJ(path, vertices, texCoords, normals, 
+                              groups, materials)
+│
+├─> Abre arquivo .obj para leitura (ifstream)
+│
+├─> Inicializa:
+│   - vector<vec3> vertices
+│   - vector<vec2> texCoords  
+│   - vector<vec3> normals
+│   - vector<Group> groups
+│   - map<string, Material> materials
+│   - Group* currentGroup = nullptr
+│   - string currentMaterialName = ""
+│
+└─> Loop Principal: getline(objFile, line)
+    │
+    ├─────────────────────────────────────────────────────────────────────
+    │ COMANDO: "mtllib arquivo.mtl"
+    ├─────────────────────────────────────────────────────────────────────
+    │   │
+    │   └─> OBJReader::readFileMTL(mtlPath, materials, directory)
+    │       │
+    │       ├─> Abre arquivo .mtl
+    │       │
+    │       └─> Loop: getline(mtlFile, line)
+    │           │
+    │           ├─> "newmtl nome_material"
+    │           │   └─> Cria novo Material()
+    │           │       └─> material.name = nome_material
+    │           │
+    │           ├─> "Ka r g b"  → material.Ka = vec3(r, g, b)
+    │           │                  (coeficiente ambiente)
+    │           │
+    │           ├─> "Kd r g b"  → material.Kd = vec3(r, g, b)
+    │           │                  (coeficiente difuso)
+    │           │
+    │           ├─> "Ks r g b"  → material.Ks = vec3(r, g, b)
+    │           │                  (coeficiente especular)
+    │           │
+    │           ├─> "Ns valor"  → material.Ns = float(valor)
+    │           │                  (expoente especular/shininess)
+    │           │
+    │           └─> "map_Kd caminho_textura"
+    │               └─> material.map_Kd = caminho_textura
+    │                   └─> materials[nome_material] = material
+    │
+    ├─────────────────────────────────────────────────────────────────────
+    │ COMANDO: "v x y z" (Coordenadas de Vértice)
+    ├─────────────────────────────────────────────────────────────────────
+    │   │
+    │   └─> OBJReader::parseVertice(line, vertices)
+    │       │
+    │       ├─> Extrai valores: x, y, z
+    │       └─> vertices.push_back(vec3(x, y, z))
+    │
+    ├─────────────────────────────────────────────────────────────────────
+    │ COMANDO: "vt u v" (Coordenadas de Textura)
+    ├─────────────────────────────────────────────────────────────────────
+    │   │
+    │   └─> OBJReader::parseTexCoord(line, texCoords)
+    │       │
+    │       ├─> Extrai valores: u, v
+    │       └─> texCoords.push_back(vec2(u, v))
+    │
+    ├─────────────────────────────────────────────────────────────────────
+    │ COMANDO: "vn x y z" (Vetores Normais)
+    ├─────────────────────────────────────────────────────────────────────
+    │   │
+    │   └─> OBJReader::parseNormal(line, normals)
+    │       │
+    │       ├─> Extrai valores: x, y, z
+    │       └─> normals.push_back(vec3(x, y, z))
+    │
+    ├─────────────────────────────────────────────────────────────────────
+    │ COMANDO: "g nome" ou "o nome" (Definição de Grupo)
+    ├─────────────────────────────────────────────────────────────────────
+    │   │
+    │   ├─> groups.emplace_back(nome)
+    │   │
+    │   ├─> currentGroup = &groups.back()
+    │   │
+    │   └─> Se existe currentMaterialName:
+    │       └─> currentGroup->material = materials[currentMaterialName]
+    │
+    ├─────────────────────────────────────────────────────────────────────
+    │ COMANDO: "usemtl nome_material" (Usa Material)
+    ├─────────────────────────────────────────────────────────────────────
+    │   │
+    │   ├─> currentMaterialName = nome_material
+    │   │
+    │   └─> Se existe currentGroup:
+    │       └─> currentGroup->material = materials[nome_material]
+    │
+    └─────────────────────────────────────────────────────────────────────
+      COMANDO: "f v1/vt1/vn1 v2/vt2/vn2 v3/vt3/vn3 ..." (Face)
+    ─────────────────────────────────────────────────────────────────────
+        │
+        ├─> Se não existe currentGroup:
+        │   │
+        │   ├─> groups.emplace_back("default")
+        │   │
+        │   ├─> currentGroup = &groups.back()
+        │   │
+        │   └─> Se existe currentMaterialName:
+        │       └─> currentGroup->material = materials[currentMaterialName]
+        │
+        └─> OBJReader::parseFace(line, face)
+            │
+            ├─> Face face;  // Nova face vazia
+            │
+            ├─> Split linha por espaços: ["f", "1/1/1", "2/2/2", "3/3/3", ...]
+            │
+            └─> Para cada token "v/vt/vn":
+                │
+                ├─> Split token por '/': [v, vt, vn]
+                │
+                ├─> Se existe índice de vértice (v):
+                │   └─> face.vertexIndices.push_back(stoi(v))
+                │
+                ├─> Se existe índice de textura (vt):
+                │   └─> face.textureIndices.push_back(stoi(vt))
+                │
+                ├─> Se existe índice de normal (vn):
+                │   └─> face.normalIndices.push_back(stoi(vn))
+                │
+                └─> currentGroup->addFace(face)
+                    └─> Group.cpp :: faces.push_back(face)
+
+
+3. PROCESSAMENTO E SETUP DA MALHA (MESH)
+================================================================================
+
+Mesh.cpp :: setupMesh()
+│
+└─> Para cada Group nos groups:
+    │
+    ├───────────────────────────────────────────────────────────────────
+    │ CONVERSÃO DE ÍNDICES PARA VÉRTICES COMPLETOS
+    ├───────────────────────────────────────────────────────────────────
+    │   │
+    │   └─> Para cada Face no group.faces:
+    │       │
+    │       └─> Para cada índice i na face:
+    │           │
+    │           ├─> Cria Vertex vertex;
+    │           │
+    │           ├─> vertex.Position = vertices[face.vertexIndices[i] - 1]
+    │           │   Nota: OBJ usa índice base-1, C++ usa base-0
+    │           │
+    │           ├─> Se existe textureIndices[i]:
+    │           │   └─> vertex.TexCoords = texCoords[face.textureIndices[i] - 1]
+    │           │   Caso contrário:
+    │           │   └─> vertex.TexCoords = vec2(0.0f, 0.0f)
+    │           │
+    │           ├─> Se existe normalIndices[i]:
+    │           │   └─> vertex.Normal = normals[face.normalIndices[i] - 1]
+    │           │   Caso contrário:
+    │           │   └─> vertex.Normal = vec3(0.0f, 1.0f, 0.0f)
+    │           │
+    │           └─> group.vertices.push_back(vertex)
+    │
+    ├───────────────────────────────────────────────────────────────────
+    │ CARREGAMENTO DE TEXTURA (se existir)
+    ├───────────────────────────────────────────────────────────────────
+    │   │
+    │   └─> Se group.material.map_Kd não está vazio:
+    │       │
+    │       └─> Texture.cpp :: loadTexture(texturePath)
+    │           │
+    │           ├─> Verifica cache: auto it = textureCache.find(path)
+    │           │
+    │           ├─> SE ENCONTRADO NO CACHE:
+    │           │   │
+    │           │   └─> Retorna it->second (ID da textura já carregada)
+    │           │       └─> cout << "Textura recuperada do cache"
+    │           │
+    │           └─> SE NÃO ENCONTRADO:
+    │               │
+    │               └─> loadTextureFromFile(path)
+    │                   │
+    │                   ├─> glGenTextures(1, &textureID)
+    │                   │
+    │                   ├─> stbi_set_flip_vertically_on_load(true)
+    │                   │
+    │                   ├─> stbi_load(path) → unsigned char* data
+    │                   │   └─> Retorna: width, height, nrComponents
+    │                   │
+    │                   ├─> Determina formato:
+    │                   │   - 1 componente → GL_RED
+    │                   │   - 3 componentes → GL_RGB
+    │                   │   - 4 componentes → GL_RGBA
+    │                   │
+    │                   ├─> glBindTexture(GL_TEXTURE_2D, textureID)
+    │                   │
+    │                   ├─> glTexImage2D(..., format, width, height, ..., data)
+    │                   │
+    │                   ├─> glGenerateMipmap(GL_TEXTURE_2D)
+    │                   │
+    │                   ├─> Configura parâmetros:
+    │                   │   - GL_TEXTURE_WRAP_S = GL_REPEAT
+    │                   │   - GL_TEXTURE_WRAP_T = GL_REPEAT
+    │                   │   - GL_TEXTURE_MIN_FILTER = GL_LINEAR_MIPMAP_LINEAR
+    │                   │   - GL_TEXTURE_MAG_FILTER = GL_LINEAR
+    │                   │
+    │                   ├─> stbi_image_free(data)
+    │                   │
+    │                   ├─> textureCache[path] = textureID
+    │                   │
+    │                   └─> Retorna textureID
+    │
+    ├───────────────────────────────────────────────────────────────────
+    │ SETUP DE BUFFERS OPENGL
+    ├───────────────────────────────────────────────────────────────────
+    │   │
+    │   └─> Group.cpp :: setupBuffers()
+    │       │
+    │       ├─> glGenVertexArrays(1, &VAO)
+    │       ├─> glGenBuffers(1, &VBO)
+    │       │
+    │       ├─> glBindVertexArray(VAO)
+    │       ├─> glBindBuffer(GL_ARRAY_BUFFER, VBO)
+    │       │
+    │       ├─> glBufferData(GL_ARRAY_BUFFER, 
+    │       │                vertices.size() * sizeof(Vertex),
+    │       │                &vertices[0],
+    │       │                GL_STATIC_DRAW)
+    │       │
+    │       ├─> Configura Layout de Atributos:
+    │       │   │
+    │       │   ├─> Layout 0: Position (vec3)
+    │       │   │   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+    │       │   │                         sizeof(Vertex),
+    │       │   │                         (void*)offsetof(Vertex, Position))
+    │       │   │   glEnableVertexAttribArray(0)
+    │       │   │
+    │       │   ├─> Layout 1: Normal (vec3)
+    │       │   │   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
+    │       │   │                         sizeof(Vertex),
+    │       │   │                         (void*)offsetof(Vertex, Normal))
+    │       │   │   glEnableVertexAttribArray(1)
+    │       │   │
+    │       │   └─> Layout 2: TexCoords (vec2)
+    │       │       glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
+    │       │                             sizeof(Vertex),
+    │       │                             (void*)offsetof(Vertex, TexCoords))
+    │       │       glEnableVertexAttribArray(2)
+    │       │
+    │       └─> glBindVertexArray(0) // Desvincula
+
+
+4. ESTRUTURAS DE DADOS RESULTANTES
+================================================================================
+
+Object3D
+│
+├─> string name
+├─> bool eliminable
+│
+├─> Transformações:
+│   ├─> mat4 transform      (model matrix)
+│   ├─> vec3 position       (x, y, z)
+│   ├─> vec3 rotation       (rx, ry, rz em radianos)
+│   └─> vec3 scale          (sx, sy, sz)
+│
+├─> Animação (se aplicável):
+│   ├─> vector<vec3> curvePath
+│   ├─> int currentCurveIndex
+│   ├─> float curveProgress
+│   ├─> bool isAnimated
+│   └─> float animationSpeed
+│
+└─> Mesh mesh
+    │
+    ├─> Dados Brutos do OBJ:
+    │   ├─> vector<vec3> vertices      (todas as posições)
+    │   ├─> vector<vec2> texCoords     (todas as coords de textura)
+    │   └─> vector<vec3> normals       (todas as normais)
+    │
+    ├─> Materiais:
+    │   └─> map<string, Material> materials
+    │       │
+    │       └─> Material:
+    │           ├─> string name
+    │           ├─> vec3 Ka    (coef. ambiente)
+    │           ├─> vec3 Kd    (coef. difuso)
+    │           ├─> vec3 Ks    (coef. especular)
+    │           ├─> float Ns   (shininess)
+    │           └─> string map_Kd (path textura)
+    │
+    ├─> BoundingBox boundingBox
+    │   ├─> vec3 pontoMinimo
+    │   └─> vec3 pontoMaximo
+    │
+    └─> vector<Group> groups
+        │
+        └─> Group[i]
+            │
+            ├─> string name
+            │
+            ├─> vector<Face> faces (estrutura de índices original)
+            │   │
+            │   └─> Face:
+            │       ├─> vector<int> vertexIndices
+            │       ├─> vector<int> textureIndices
+            │       └─> vector<int> normalIndices
+            │
+            ├─> vector<Vertex> vertices (dados processados para GPU)
+            │   │
+            │   └─> Vertex:
+            │       ├─> vec3 Position
+            │       ├─> vec3 Normal
+            │       └─> vec2 TexCoords
+            │
+            ├─> Material material
+            │   ├─> vec3 Ka, Kd, Ks
+            │   ├─> float Ns
+            │   └─> string map_Kd
+            │
+            ├─> unsigned int textureID (ID OpenGL)
+            │
+            └─> Buffers OpenGL:
+                ├─> unsigned int VAO (Vertex Array Object)
+                └─> unsigned int VBO (Vertex Buffer Object)
+
+
+5. EXEMPLO PRÁTICO: track.obj
+================================================================================
+
+Arquivo track.obj:
+─────────────────────────────────────────────────────────────────────────
+
+# Track Material
+mtllib track.mtl
+
+usemtl track_material
+s 1
+
+v -3.02976 0 2.19674     # Vértice 1
+v -3.03682 0 2.17715     # Vértice 2
+v -3.04368 0 2.15736     # Vértice 3
+v -3.05036 0 2.13735     # Vértice 4
+... (total: 2200 vértices)
+
+vt 0.0 0.0               # TexCoord 1
+vt 1.0 0.0               # TexCoord 2
+vt 1.0 1.0               # TexCoord 3
+vt 0.0 1.0               # TexCoord 4
+... (total: coords de textura)
+
+vn 0 1 0                 # Normal 1 (apontando para cima)
+vn 0 1 0                 # Normal 2
+... (total: 2200 normais)
+
+f 1/1/1 2/2/2 3/3/3 4/4/4    # Face 1 (quad com 4 vértices)
+f 5/5/5 6/6/6 7/7/7 8/8/8    # Face 2
+... (total: 2200 faces)
+
+─────────────────────────────────────────────────────────────────────────
+
+Processamento da Face: f 1/1/1 2/2/2 3/3/3 4/4/4
+─────────────────────────────────────────────────────────────────────────
+
+1. parseFace() cria Face:
+   ├─> vertexIndices = [1, 2, 3, 4]
+   ├─> textureIndices = [1, 2, 3, 4]
+   └─> normalIndices = [1, 2, 3, 4]
+
+2. setupMesh() converte para Vertex structs:
+   │
+   ├─> Vertex v1:
+   │   ├─> Position = vertices[0]   = (-3.02976, 0, 2.19674)
+   │   ├─> Normal = normals[0]      = (0, 1, 0)
+   │   └─> TexCoords = texCoords[0] = (0.0, 0.0)
+   │
+   ├─> Vertex v2:
+   │   ├─> Position = vertices[1]   = (-3.03682, 0, 2.17715)
+   │   ├─> Normal = normals[1]      = (0, 1, 0)
+   │   └─> TexCoords = texCoords[1] = (1.0, 0.0)
+   │
+   ├─> Vertex v3:
+   │   ├─> Position = vertices[2]   = (-3.04368, 0, 2.15736)
+   │   ├─> Normal = normals[2]      = (0, 1, 0)
+   │   └─> TexCoords = texCoords[2] = (1.0, 1.0)
+   │
+   └─> Vertex v4:
+       ├─> Position = vertices[3]   = (-3.05036, 0, 2.13735)
+       ├─> Normal = normals[3]      = (0, 1, 0)
+       └─> TexCoords = texCoords[3] = (0.0, 1.0)
+
+3. Enviados para GPU:
+   └─> glBufferData(VBO, sizeof(Vertex) * 4, &vertices[0], GL_STATIC_DRAW)
+
+4. Renderização:
+   └─> glDrawArrays(GL_QUADS, 0, 4) ou glDrawArrays(GL_TRIANGLES, 0, 6)
+
+
+6. RENDERIZAÇÃO (FASE FINAL)
+================================================================================
+
+System.cpp :: render()
+│
+└─> Para cada Object3D em sceneObjects:
+    │
+    └─> Object3D::render(shader)
+        │
+        ├─> Envia model matrix para shader:
+        │   glUniformMatrix4fv(..., "model", ..., transform)
+        │
+        └─> Mesh::render(shader)
+            │
+            └─> Para cada Group:
+                │
+                ├─> Envia propriedades do material para shader:
+                │   ├─> glUniform3fv(..., "material.Ka", material.Ka)
+                │   ├─> glUniform3fv(..., "material.Kd", material.Kd)
+                │   ├─> glUniform3fv(..., "material.Ks", material.Ks)
+                │   └─> glUniform1f(..., "material.Ns", material.Ns)
+                │
+                ├─> Se tem textura:
+                │   ├─> glActiveTexture(GL_TEXTURE0)
+                │   ├─> glBindTexture(GL_TEXTURE_2D, textureID)
+                │   └─> glUniform1i(..., "texture1", 0)
+                │
+                ├─> Group::render()
+                │   │
+                │   ├─> glBindVertexArray(VAO)
+                │   │
+                │   └─> glDrawArrays(GL_TRIANGLES, 0, vertices.size())
+                │       │
+                │       └─> GPU processa:
+                │           ├─> Vertex Shader (por vértice)
+                │           ├─> Rasterização
+                │           └─> Fragment Shader (por pixel)
+                │
+                └─> glBindVertexArray(0)
+
+
+7. CACHE DE TEXTURAS (OTIMIZAÇÃO)
+================================================================================
+
+Texture.cpp :: static map<string, unsigned int> textureCache
+
+Benefícios:
+├─> Evita carregar a mesma textura múltiplas vezes
+├─> Economiza memória GPU
+├─> Melhora performance de carregamento
+└─> Compartilha texturas entre diferentes grupos/objetos
+
+Funcionamento:
+│
+├─> Primeira vez que textura é requisitada:
+│   ├─> Não está no cache
+│   ├─> Carrega do disco (stbi_load)
+│   ├─> Envia para GPU (glTexImage2D)
+│   ├─> Adiciona ao cache: textureCache[path] = textureID
+│   └─> Retorna textureID
+│
+└─> Próximas vezes:
+    ├─> Encontra no cache
+    └─> Retorna textureID existente (instantâneo)
+
+Limpeza:
+└─> System::shutdown()
+    └─> Texture::clearCache()
+        ├─> Para cada (path, textureID) no cache:
+        │   └─> glDeleteTextures(1, &textureID)
+        └─> textureCache.clear()
+
+
+================================================================================
+                              PONTOS-CHAVE
+================================================================================
+
+1. ÍNDICES BASE-1 vs BASE-0:
+   - OBJ usa índices começando em 1
+   - C++/OpenGL usa índices começando em 0
+   - Conversão: indice_cpp = indice_obj - 1
+
+2. SEPARAÇÃO DE DADOS:
+   - Arquivo OBJ: dados separados (v, vt, vn) + índices (f)
+   - GPU: dados entrelaçados (Vertex struct com Position+Normal+TexCoords)
+
+3. AGRUPAMENTO POR MATERIAL:
+   - Cada Group representa um material/textura diferente
+   - Permite renderizar com propriedades visuais distintas
+   - Otimiza mudanças de estado OpenGL
+
+4. PIPELINE COMPLETO:
+   Arquivo .obj → Parse → Índices → Flatten → VBO/VAO → GPU → Renderização
+
+5. OTIMIZAÇÕES IMPLEMENTADAS:
+   - Cache de texturas (evita recarregamentos)
+   - Bounding boxes (acelera colisões)
+   - Grupos por material (minimiza state changes)
+   - VBO/VAO (acesso rápido GPU)
+
+================================================================================
+                                   FIM
+================================================================================

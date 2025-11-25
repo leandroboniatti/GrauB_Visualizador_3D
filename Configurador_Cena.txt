@@ -6,27 +6,32 @@
 
 # => Posição da Câmera:
 #      posX posY posZ
-CAMERA  0.0  2.0 10.0
+CAMERA -2.0  3.0 10.0
 
 # => Fonte de Luz:
 #      posX posY posZ colorR colorG colorB
-LIGHT   0.0 10.0  5.0   2.0    2.0    2.0
+LIGHT   0.0 10.0  0.0   2.0    2.0    1.8
 
 # => Atenuação da fonte de luz: 
 #          constante linear quadratica
 ATTENUATION   1.0     0.045   0.0075
 
 # => FOG:
-#   enable(1/0) colorR colorG colorB density start   end type (0=linear,1=exp,2=exp²)
-FOG    0          0.9    0.9    0.9    0.01   10.0  50.0   1
+#   enable(1/0) colorR colorG colorB density start   end type (0=linear,1=exp,,2=exp²)
+FOG    0          0.9    0.9    0.9    0.08   10.0  50.0   1
 
 
 
 # # # == OBJETOS DA CENA == # # #
 
-#   Nome           Path             posX posY posZ rotX rotY rotZ scaleX scaleY scaleZ elim
-Conversivel models/conversivel.obj   0.0  0.5 -2.0 0.00 1.57 0.00   5.0    5.0    5.0    1
+#$$$$$ GRAU B $$$$$
+#   Nome           Path              posX posY posZ rotX rotY rotZ scaleX scaleY scaleZ elim
+#Veiculo     models/conversivel.obj   0.0  0.5 -2.0 0.00 1.57 0.00   5.0    5.0    5.0    1
+ Veiculo     models/car.obj           0.0  0.5 -2.0 0.00 0.00 0.00   0.1    0.1    0.1    1
+ Pista       models/pista.obj         0.0  0.0 -5.0 0.00 0.00 0.00   1.0    1.0    1.0    0
 
+
+#$$$$$ GRAU A $$$$$
 # (alvos)      Path           posX posY posZ rotX rotY rotZ scaleX scaleY scaleZ elim
 #Target1 models/cube.obj      -4.0  0.0 -2.0 0.00 0.00 0.00   1.0    1.0    1.0    1
 #Target2 models/pyramid.obj    4.0  0.0 -2.0 0.00 0.78 0.00   1.0    1.0    1.0    1
@@ -35,7 +40,7 @@ Conversivel models/conversivel.obj   0.0  0.5 -2.0 0.00 1.57 0.00   5.0    5.0  
 # (obstáculos) Path     posX posY posZ rotX rotY rotZ scaleX scaleY scaleZ elim
 #Wall1 models/wall.obj  -5.0  2.0 -6.0 0.00 0.00 0.00   1.0    3.0    1.0    0
 #Wall2 models/wall.obj   5.0  2.0 -6.0 0.00 0.00 0.00   1.0    3.0    1.0    0
-Floor models/floor.obj   0.0 -1.0  0.0 0.00 0.00 0.00  10.0    0.1   10.0    0
+#Floor models/floor.obj   0.0 -1.0  0.0 0.00 0.00 0.00  10.0    0.1   10.0    0
 
 # (refletores) Path       posX posY posZ rotX rotY rotZ scaleX scaleY scaleZ elim
 #Mirror1 models/cube.obj  -1.5  1.0 -1.0 0.00 0.00 0.00   0.5    2.0    0.1    0

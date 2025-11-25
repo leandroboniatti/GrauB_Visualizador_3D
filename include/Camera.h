@@ -9,11 +9,11 @@ using namespace glm;
 
 enum Camera_Movement {FORWARD, BACKWARD, LEFT, RIGHT};
 
-const float YAW = -90.0f;   // ângulo Yaw inicial da câmera
-const float PITCH = 0.0f;   // ângulo Pitch inicial da câmera
-const float SPEED = 2.5f;   // velocidade de movimento da câmera
-const float SENSITIVITY = 0.1f;   // sensibilidade do mouse
-const float ZOOM = 45.0f;   // nível de zoom da câmera
+const float YAW =   -90.0f;       // ângulo Yaw inicial da câmera
+const float PITCH =   0.0f;       // ângulo Pitch inicial da câmera
+const float SPEED =   3.5f;       // velocidade de movimento da câmera
+const float SENSITIVITY = 0.15f;  // sensibilidade do mouse
+const float ZOOM = 45.0f;         // nível de zoom da câmera
 
 class Camera {
 public:

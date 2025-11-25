@@ -5,10 +5,10 @@
 #include <algorithm>
 
 // Realiza a leitura de um arquivo OBJ, preenchendo os vetores passados por referência
-// Uso: System::LoadSceneObjects -> OBJ3D:loadObject -> Mesh::readObjectModel -> OBJReader::readFileOBJ
+// Uso: System::loadSceneObjects -> Object3D::loadObject -> Mesh::readObjectModel -> OBJReader::readFileOBJ
 // As classes anteriores "chamam" este método para carregar o modelo OBJ
-// Os vetores de armazenamento de vértices, textura, normais e grupos
-// são passados como referência para este método, que os preenche
+// Os vetores de armazenamento de vértices, textura, normais e grupos são da classe Mesh
+// e são passados como referência para este método, que os preenche
 bool OBJReader::readFileOBJ(const string& objFilePath,
                             vector<vec3>& vertices,
                             vector<vec2>& texCoords,
@@ -19,7 +19,7 @@ bool OBJReader::readFileOBJ(const string& objFilePath,
     ifstream objFile(objFilePath);    // Abre o arquivo OBJ para leitura
 
     if (!objFile.is_open()) {  // Debug
-        cerr << "Falha ao abrir arquivo OBJ: " << objFilePath << endl;
+        cerr << "Falha ao abrir arquivo OBJ: " << objFilePath << endl;  cout << endl;
         return false;
     }
     
@@ -36,6 +36,7 @@ bool OBJReader::readFileOBJ(const string& objFilePath,
     string objDirectory = getDirectory(objFilePath); // Obtém o diretório do arquivo .obj para localizar arquivos MTL e texturas
 
     while (getline(objFile, objFileLine)) { // Lê o arquivo linha por linha e armazena cada linha em 'objFileLine'
+        
         objFileLine = trim(objFileLine);  // Remove espaços em branco no início e no final da linha
 
         if (objFileLine.empty() || objFileLine[0] == '#') { continue; } // Ignora linhas vazias e de comentários "#"
@@ -44,11 +45,11 @@ bool OBJReader::readFileOBJ(const string& objFilePath,
         string prefix;
         sline >> prefix;  // Lê o prefixo da linha (v, vt, vn, f, etc.)
 
-        if (prefix == "mtllib") { // Carrega o arquivo MTL
-            string mtlFileName;
-            sline >> mtlFileName;
-            string mtlFilePath = objDirectory + "/" + mtlFileName;
-            readFileMTL(mtlFilePath, materials, objDirectory); // le o arquivo MTL e preenche o mapa de materiais
+        if (prefix == "mtllib") { // Carrega o arquivo MTL para preencher o mapa de materiais
+            string mtlFilePath;
+            sline >> mtlFilePath;
+            //string mtlFilePath = objDirectory + "/" + mtlFileName;
+            readFileMTL(mtlFilePath, materials); // le o arquivo MTL e preenche o mapa de materiais
         }
         else if (prefix == "v") {           // adiciona as coord. do vértice (vec3), presentes na linha, ao vetor de
             parseVertice(objFileLine, vertices);   // coordenadas dos vértices definido na classe Mesh (vector<vec3> vertices;)
@@ -105,18 +106,16 @@ bool OBJReader::readFileOBJ(const string& objFilePath,
 
 
 // Realiza a Leitura de um arquivo MTL e preenche o mapa de materiais
-bool OBJReader::readFileMTL(const string& mtlFilePath,
-                            map<string, Material>& materials,
-                            const string& objDirectory) {
+bool OBJReader::readFileMTL(const string& mtlFilePath, map<string, Material>& materials) {
     
     ifstream mtlFile(mtlFilePath); // Abre o arquivo MTL para leitura
     
     if (!mtlFile.is_open()) {   // Debug
-        cerr << "Aviso: Falha ao abrir arquivo MTL: " << mtlFilePath << endl;
+        cerr << "Aviso: Falha ao abrir arquivo MTL: " << mtlFilePath << endl;   cout << endl;
         return false;
     }
     
-    Material currentMaterial;   // instancia um material temporário
+    Material currentMaterial;   // instancia um material temporário ("currentMaterial")
     bool hasMaterial = false;
     string mtlFileLine; // variável temporária para armazenar cada linha lida do arquivo de configuração .mtl
     
@@ -133,7 +132,7 @@ bool OBJReader::readFileMTL(const string& mtlFilePath,
                 
             if (hasMaterial) { materials[currentMaterial.name] = currentMaterial; } // Se já havia um material sendo processado, salva no mapa
             
-            currentMaterial = Material();   // instancia um novo material padrão
+            currentMaterial = Material();   // instancia um novo material temporário ("currentMaterial")
             sline >> currentMaterial.name;
             hasMaterial = true;
         }
@@ -153,16 +152,10 @@ bool OBJReader::readFileMTL(const string& mtlFilePath,
             currentMaterial.Ks = vec3(r, g, b);
         }
         else if (prefix == "Ns") {  // Expoente especular (brilho/shininess)
-            float ns;
-            sline >> ns;
-            currentMaterial.Ns = ns;
+            sline >> currentMaterial.Ns;
         }
         else if (prefix == "map_Kd") {  // Textura
-            //string texturePath;
-            //sline >> texturePath;
-            // Mantém apenas o nome do arquivo, o caminho completo será resolvido depois
-            //currentMaterial.map_Kd = texturePath;
-            sline >> currentMaterial.map_Kd;    // caminho do arquivo de textura
+            sline >> currentMaterial.map_Kd;    // caminho (path) do arquivo de textura
         }
     }
     
@@ -172,11 +165,10 @@ bool OBJReader::readFileMTL(const string& mtlFilePath,
     mtlFile.close();
     
     cout << "Carregado(s) " << materials.size() << " material(is) do arquivo " << mtlFilePath << endl;
+    cout << endl;
     
     return true;
 }
-
-
 
 
 // Analisa uma linha do arquivo OBJ e preenche os indices da face

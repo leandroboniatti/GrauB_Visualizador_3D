@@ -1,4 +1,5 @@
 #include "System.h"
+#include "Texture.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -9,8 +10,9 @@ static System* systemInstance = nullptr;
 static bool tiroDisparado = false;
 static bool fogTogglePressed = false;
 
-// Grau B - Carrega configurações do sistema a partir do arquivo "Configurador_Sistema.txt"
-// Configurações de camera, iluminação e fog podem ser ajustadas neste arquivo sem a necessidade de recompilar o código
+// Grau B - Carrega configurações do sistema (câmera, luz, fog) também a partir do arquivo
+// "Configurador_Sistema.txt", assim como os objetos da cena, de forma que configurações
+// de camera, iluminação e fog podem ser ajustadas neste arquivo sem a necessidade de recompilar o código
 System::System() : window(nullptr), 
                    camera(vec3(0.0f, 2.0f, 20.0f)), // valores padrão, serão sobrescritos
                    deltaTime(0.0f),
@@ -31,18 +33,27 @@ System::System() : window(nullptr),
                    fogEnabled(true)
 {
     systemInstance = this;
-    
-    // Carrega configurações do sistema a partir do arquivo configurador de cena
-    loadSystemConfiguration();
 }
 
 
-System::~System() { shutdown(); }
+// Destrutor padrão
+System::~System() { }
 
 
+// Função de limpeza e desligamento do sistema
 void System::shutdown() {
-    sceneObjects.clear();
-    projeteis.clear();
+    // Fluxo de limpeza:
+    // 1. Limpar objetos da cena (libera VAO e VBO de cada objeto)
+    // 2. Limpar projéteis (libera recursos gráficos dos projéteis)
+    // 3. Limpar cache de texturas (chama glDeleteTextures para cada textura)
+    // 4. Destruir janela GLFW (destrói contexto OpenGL)
+    // 5. Terminar GLFW (libera recursos da biblioteca)
+    
+    sceneObjects.clear(); // remove todos os objetos da cena e chama os destrutores de cada objeto
+    projeteis.clear(); // remove todos os projéteis da cena e chama os destrutores de cada objeto
+    
+    // Limpa o cache de texturas, liberando recursos da GPU
+    Texture::clearCache();
     
     if (window) {
         glfwDestroyWindow(window);
@@ -50,7 +61,7 @@ void System::shutdown() {
     }
     glfwTerminate();
 
-    cout << "Desligamento do sistema concluido" << endl;
+    cout << "Sistema encerrado: objetos, texturas e recursos liberados" << endl;    cout << endl;
 }
 
 
@@ -107,6 +118,7 @@ bool System::initializeOpenGL() {
     // Imprimir informações do OpenGL e Placa de Vídeo
     cout << "Versao OpenGL: " << glGetString(GL_VERSION) << endl;
     cout << "Renderer: "      << glGetString(GL_RENDERER) << endl;
+    cout << endl;
 
     return true;
 }
@@ -236,25 +248,18 @@ bool System::loadShaders() {
             // CÁLCULO DO FOG (apenas se estiver habilitado)
             if (fogEnabled) {
                 float fogFactor = 0.0;
+
                 float fogDistance = length(viewPos - elementPosition);
                 
-                if (fogType == 1) {
-                    // Fog linear
-                    //fogFactor = (fogEnd - fogDistance) / (fogEnd - fogStart);
-                    fogFactor = 1 / fogDistance; // alternativa para evitar divisão por zero
-
-                } else if (fogType == 0) {
-                    // Fog exponencial
-                    fogFactor = exp(-fogDensity * fogDistance);
-                } else if (fogType == 2) {
-                    // Fog exponencial ao quadrado
-                    fogFactor = exp(-pow(fogDensity * fogDistance, 2.0));
-                }
+                if      (fogType == 0) { fogFactor = 1 / fogDistance; } // Fog linear - antes era fogFactor = (fogEnd - fogDistance) / (fogEnd - fogStart);
+                
+                else if (fogType == 1) { fogFactor = exp(-fogDensity * fogDistance); } // Fog exponencial
+                
+                else if (fogType == 2) { fogFactor = exp(-pow(fogDensity * fogDistance, 2.0)); } // Fog exponencial ao quadrado
                 
                 fogFactor = clamp(fogFactor, 0.0, 1.0);  // garante que o fator fique entre 0 e 1
                 
-                // Interpola entre a cor do objeto e a cor do fog
-                finalFragmentColor = mix(fogColor, finalFragmentColor, fogFactor);
+                finalFragmentColor = mix(fogColor, finalFragmentColor, fogFactor); // Interpola entre a cor do objeto e a cor do fog
             }
             
             FragColor = vec4(finalFragmentColor, 1.0); // envia a cor final do fragmento para o pipeline
@@ -262,7 +267,7 @@ bool System::loadShaders() {
     )";
     
     // Compila e linka os shaders
-    if (!mainShader.loadFromStrings(vertexShaderSource, fragmentShaderSource)) {
+    if (!mainShader.loadShaders(vertexShaderSource, fragmentShaderSource)) {
         return false;
     }
     
@@ -270,48 +275,22 @@ bool System::loadShaders() {
 }
 
 
-// Carrega os objetos na cena
-bool System::loadSceneObjects() {
-                                                     // na apresentação: ver readFileConfiguration() logo abaixo
-    auto sceneObjectsInfo = readFileConfiguration(); // lê as configurações gerais dos objetos da cena, a partir do arquivo de configuração,
-                                                     // e retorna um vetor (sceneObjectsInfo) de estruturas ObjectInfo
+// Carrega configurações da cena (câmera, luz, fog) do arquivo de configuração
+// de cena - "Configurador_Cena.txt" - evita a necessidade de recompilar o código
+// para alterar parâmetros como posição da câmera, luz e fog
+bool System::loadSystemConfiguration() {
 
-    for (auto& sceneObject : sceneObjectsInfo) { // loop para processar cada configuração de objeto lida do arquivo
-        auto object = make_unique<Object3D>(sceneObject.name);  // cria um novo objeto 3D com o nome
-                                                                // especificado no arquivo de configuração lido acima
-
-        // Tenta carregar o modelo (arquivo .obj), se falhar não adiciona o objeto à cena
-        // As texturas agora são carregadas automaticamente através dos materiais MTL
-        if (object->loadObject(sceneObject.modelPath)) {
-            object->setPosition(sceneObject.position);
-            object->setRotation(sceneObject.rotation);
-            object->setScale(sceneObject.scale);
-            object->setEliminable(sceneObject.eliminable);
-
-            sceneObjects.push_back(move(object));   // adiciona o objeto 3D criado à lista de objetos 3D da cena
-                                                    // o vetor sceneObjects é um atributo da classe System, gerado no arquivo System.h
-            cout << "Objeto carregado: " << sceneObject.name << endl;
-        }
-        else {
-            cout << "Falha ao carregar objeto: " << sceneObject.name
-                 << " de " << sceneObject.modelPath << endl;
-        }
-    }
-
-    return true;
-}
-
-
-// Carrega configurações do sistema (câmera, luz, fog) do arquivo de configuração
-void System::loadSystemConfiguration() {
     ifstream configFile("Configurador_Cena.txt");
+
     if (!configFile.is_open()) {
-        cerr << "Aviso: Não foi possível abrir Configurador_Cena.txt para configurações do sistema" << endl;
-        return;
+        cerr << "Aviso: Nao foi possivel abrir Configurador_Cena.txt para configuracoes do sistema" << endl;
+        return false;
     }
     
     string line;
+
     while (getline(configFile, line)) {
+
         if (line.empty() || line[0] == '#') continue;
         
         istringstream sline(line);
@@ -322,86 +301,153 @@ void System::loadSystemConfiguration() {
             vec3 cameraPos;
             sline >> cameraPos.x >> cameraPos.y >> cameraPos.z;
             camera.Position = cameraPos;
-            cout << "Camera configurada: (" << cameraPos.x << ", " << cameraPos.y << ", " << cameraPos.z << ")" << endl;
+            cout << "Camera configurada para a posicao: (" << cameraPos.x << ", " << cameraPos.y << ", " << cameraPos.z << ")" << endl;
         }
         else if (keyword == "LIGHT") {
             sline >> lightPos.x >> lightPos.y >> lightPos.z
                   >> lightColor.x >> lightColor.y >> lightColor.z;
-            cout << "Luz configurada - Pos: (" << lightPos.x << ", " << lightPos.y << ", " << lightPos.z << ")";
-            cout << " Color: (" << lightColor.x << ", " << lightColor.y << ", " << lightColor.z << ")" << endl;
+            cout << "Luz configurada para a posicao: (" << lightPos.x << ", " << lightPos.y << ", " << lightPos.z << ")";
+            cout << " e Intensidade(Cor): (" << lightColor.x << ", " << lightColor.y << ", " << lightColor.z << ")" << endl;
         }
         else if (keyword == "ATTENUATION") {
             sline >> attConstant >> attLinear >> attQuadratic;
-            cout << "Atenuação configurada: (" << attConstant << ", " << attLinear << ", " << attQuadratic << ")" << endl;
+            cout << "Atenuacao configurada para (c1,c2,c3): (" << attConstant << ", " << attLinear << ", " << attQuadratic << ")" << endl;
         }
         else if (keyword == "FOG") {
             int enabled;
             sline >> enabled >> fogColor.x >> fogColor.y >> fogColor.z
                   >> fogDensity >> fogStart >> fogEnd >> fogType;
             fogEnabled = (enabled == 1);
-            cout << "Fog configurado - Enabled: " << (fogEnabled ? "Sim" : "Não")
-                 << " Type: " << fogType << " Density: " << fogDensity << endl;
+            cout << "Fog configurado => Habilitado: " << (fogEnabled ? "Sim" : "Nao")
+                 << " Tipo: " << fogType << " Densidade: " << fogDensity << endl;
         }
     }
     
     configFile.close();
+
+    cout << endl;
+
+    return true;
 }
 
 
-// Carrega as informações gerais dos objetos da cena a partir do arquivo de configuração da cena - "Configurador_Cena.txt"
+// Carrega os objetos na cena
+bool System::loadSceneObjects() {
+                                                  // na apresentação: ver readObjectsInfos() (está logo abaixo)
+    auto sceneObjectsInfos = readObjectsInfos();  // a partir do arquivo de configuração, lê as configurações gerais
+                                                  // dos objetos da cena (nome, path do modelo, posição, rotação, escala, eliminável)
+                                                  // e retorna um vetor (sceneObjectsInfo) de estruturas ObjectInfo
+
+    for (auto& sceneObject : sceneObjectsInfos) { // loop para processar cada configuração de objeto lida do arquivo "configurador_cena.txt"
+
+        auto object = make_unique<Object3D>(sceneObject.name);  // cria um novo objeto 3D com o nome especificado
+                                                                // no arquivo de configuração lido acima e armazenado na estrutura sceneObject
+
+        // Tenta carregar o modelo (arquivo .obj), se falhar não adiciona o objeto à cena
+        // Grau B: As texturas agora são carregadas através dos arquivos de materiais MTL
+
+        if (object->loadObject(sceneObject.modelPath)) {   // tenta carregar o modelo 3D do arquivo .obj através da sequencia de métodos:
+                                                           // Object3D::loadObject -> Mesh::readObjectModel -> OBJReader::readFileOBJ
+                                                           // que por sua vez chama Mesh::(string& path)
+                                                           // se carregar com sucesso, prossegue para configurar o objeto com os demais parâmetros
+            object->setPosition(sceneObject.position);     // posiciona o objeto na cena
+            object->setRotation(sceneObject.rotation);     // rotaciona o objeto na cena
+            object->setScale(sceneObject.scale);           // escala o objeto na cena
+            object->setEliminable(sceneObject.eliminable); // define se o objeto pode ser eliminado ou não
+
+            // Se o objeto é o veículo, carrega a curva de animação 
+            if (sceneObject.name == "Veiculo") {
+                // Busca os parâmetros da pista para aplicar à curva
+                vec3 trackPos(0.0f), trackRot(0.0f), trackScale(1.0f);
+                for (const auto& obj : sceneObjectsInfos) {
+                    if (obj.name == "Pista") {
+                        trackPos = obj.position;
+                        trackRot = obj.rotation;
+                        trackScale = obj.scale;
+                        break;
+                    }
+                }
+                
+                if (object->loadAnimationCurve("models/curva_BSpline.txt", trackPos, trackRot, trackScale)) {
+                    object->setAnimationSpeed(2.0f); // Velocidade da animação
+                    //cout << "Animacao carregada para o " << sceneObject.name << endl;
+                }
+            }
+
+            sceneObjects.push_back(move(object));   // adiciona o objeto 3D criado à lista de objetos 3D da cena
+                                                    // o vetor sceneObjects é um atributo da classe System, gerado no arquivo System.h
+            //cout << "Objeto " << sceneObject.name << " carregado do arquivo " << sceneObject.modelPath << endl;
+        }
+        else {
+            cout << "Falha ao carregar objeto " << sceneObject.name
+                 << " de " << sceneObject.modelPath << endl;
+        }
+
+        cout << endl;
+    }
+
+    return true;
+}
+
+
+// Carrega em um vetor as informações gerais (nome, path do modelo, posição, rotação, escala, eliminável)
+// dos objetos da cena a partir do arquivo de configuração da cena - "Configurador_Cena.txt".
 // No Grau A era: (Nome Path posX posY posZ rotX rotY rotZ scaleX scaleY scaleZ Eliminável(S/N) TexturePath)
 // Agora no Grau B ficou: (Nome Path posX posY posZ rotX rotY rotZ scaleX scaleY scaleZ Eliminável(S/N))
 // uma vez que as texturas agora são carregadas automaticamente através da referência do arquivo .mtl
-vector<ObjectInfo> System::readFileConfiguration() {
+vector<ObjectInfo> System::readObjectsInfos() {
 
-    vector<ObjectInfo> sceneObjectsInfo;  // ObjectInfo é uma estrutura para armazenar informações sobre um determinado objeto 3D
-                                          // sceneObjectsInfo é um vetor que armazena várias dessas estruturas (qtd = nº de objetos da cena)
+    vector<ObjectInfo> sceneObjectsInfos;  // ObjectInfo é uma estrutura para armazenar informações sobre um determinado objeto 3D
+                                           // sceneObjectsInfo é um vetor que armazena várias dessas estruturas (qtd = nº de objetos da cena)
 
     ifstream configFile("Configurador_Cena.txt");   // abre o arquivo de configuração para leitura
 
     string line;  // variável temporária para armazenar cada linha lida do arquivo de configuração
 
     while (getline(configFile, line)) { // loop para processar cada linha do arquivo de configuração
-        if (line.empty() || line[0] == '#') continue; // Ignora linhas vazias ou comentários
         
-        // Ignora linhas de configuração do sistema
-        istringstream checkLine(line);
+        if (line.empty() || line[0] == '#') continue; // Ignora linhas vazias ou comentários
+
+        istringstream sline(line);  // Cria um stream (sline) a partir da linha lida
+        
         string firstWord;
-        checkLine >> firstWord;
+        sline >> firstWord; // Lê a primeira palavra da linha para verificar se é uma configuração do sistema
+
         if (firstWord == "CAMERA" || firstWord == "LIGHT" || 
             firstWord == "ATTENUATION" || firstWord == "FOG") {
-            continue;
+            continue;       // Ignora linhas de configuração do sistema
         }
 
-        // Nome Path posX posY posZ rotX rotY rotZ scaleX scaleY scaleZ eliminável
-        istringstream sline(line);  // Cria um stream (sline) a partir da linha lida
-        ObjectInfo objectInfo;      // instancia estrutura para armazenar informações do objeto descrito na linha processada
+        ObjectInfo objectInfo;  // instancia estrutura para armazenar informações do objeto descrito na linha processada
+                                // Nome Path posX posY posZ rotX rotY rotZ scaleX scaleY scaleZ eliminável
 
         // carrega os dados da linha para o respectivo campo da estrutura objectInfo
-        sline >> objectInfo.name
-              >> objectInfo.modelPath
-              >> objectInfo.position.x
-              >> objectInfo.position.y
-              >> objectInfo.position.z
-              >> objectInfo.rotation.x
-              >> objectInfo.rotation.y
-              >> objectInfo.rotation.z
-              >> objectInfo.scale.x
-              >> objectInfo.scale.y
-              >> objectInfo.scale.z
-              >> objectInfo.eliminable;
-              //>> objectInfo.texturePath;
+        objectInfo.name = firstWord;    // nome que o objeto terá na cena, já lido acima
+        sline >> objectInfo.modelPath   // caminho do modelo 3D (.obj)
+              >> objectInfo.position.x  // posição X, inicial, do objeto na cena
+              >> objectInfo.position.y  // posição Y, inicial, do objeto na cena
+              >> objectInfo.position.z  // posição Z, inicial, do objeto na cena
+              >> objectInfo.rotation.x  // rotação no eixo X, inicial, do objeto na cena
+              >> objectInfo.rotation.y  // rotação no eixo Y, inicial, do objeto na cena
+              >> objectInfo.rotation.z  // rotação no eixo Z, inicial, do objeto na cena
+              >> objectInfo.scale.x     // escala no eixo X, inicial, do objeto na cena
+              >> objectInfo.scale.y     // escala no eixo Y, inicial, do objeto na cena
+              >> objectInfo.scale.z     // escala no eixo Z, inicial, do objeto na cena
+              >> objectInfo.eliminable; // se o objeto pode ser eliminado (1 = sim, 0 = não)
+              //>> objectInfo.texturePath;  // caminho da textura do objeto (Grau A - removido no Grau B)
+                                            // agora as texturas são carregadas automaticamente através do arquivo .mtl associado ao .obj
 
-        sceneObjectsInfo.push_back(objectInfo); // adiciona a estrutura recém preenchida ao vetor de configurações
+        sceneObjectsInfos.push_back(objectInfo); // adiciona a estrutura recém preenchida ao vetor de configurações
     }                                           // vetor de estruturas ObjectInfo
     
     configFile.close();
 
     // debug: informa se objetos foram carregados
-    if (sceneObjectsInfo.empty()) { cerr << "Nenhum objeto carregado: verifique o arquivo Configurador_Cena.txt" << endl; }
-    else { cout << "Informações gerais de " << sceneObjectsInfo.size() << " objetos encontradas no arquivo de configuração de cena." << endl; }
+    if (sceneObjectsInfos.empty()) { cerr << "Nenhum objeto carregado: verifique o arquivo Configurador_Cena.txt" << endl; }
+    else { cout << sceneObjectsInfos.size() << " objetos encontradas no arquivo de configuracao de cena." << endl; }
+    cout << endl;
 
-    return sceneObjectsInfo;
+    return sceneObjectsInfos;
 }
 
 
@@ -444,8 +490,12 @@ void System::processInput() {
 
 // Renderiza a cena
 void System::render() {
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);   // cor de fundo (branco)
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    vec3 bgColor = fogEnabled ? fogColor : vec3(0.7f, 1.0f, 0.7f); // Usa a cor do fog como cor de fundo quando fog estiver ativo
+
+    // Limpa o buffer de cor e o buffer de profundidade
+    glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f); // define a cor de fundo
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);  // limpa os buffers
 
     // Calcula a matriz de projeção - perspective(FOV, razão de aspecto, Near, Far) - razão de aspecto = largura/altura
     mat4 projection = perspective(radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
@@ -453,8 +503,10 @@ void System::render() {
     // Calcula a matriz de visualização - lookAt(posição da câmera, ponto para onde a câmera está olhando, vetor up da câmera)
     mat4 view = camera.GetViewMatrix(); // lookAt(Position, Position + Front, Up)
     
-    // Configura 
-    mainShader.use();
+    // Ativa o programa de shader
+    if (mainShader.ID != 0) { glUseProgram(mainShader.ID); }
+    
+    // Configura uniforms de transformação
     glUniformMatrix4fv(glGetUniformLocation(mainShader.ID, "projection"), 1, GL_FALSE, value_ptr(projection));
     glUniformMatrix4fv(glGetUniformLocation(mainShader.ID, "view"), 1, GL_FALSE, value_ptr(view));
     
@@ -463,12 +515,12 @@ void System::render() {
     glUniform3fv(glGetUniformLocation(mainShader.ID, "lightColor"), 1, value_ptr(lightColor));
     glUniform3fv(glGetUniformLocation(mainShader.ID, "viewPos"), 1, value_ptr(camera.Position));
     
-    // Coeficientes de atenuação atmosférica
+    // Configura coeficientes de atenuação atmosférica
     glUniform1f(glGetUniformLocation(mainShader.ID, "attConstant"), attConstant);
     glUniform1f(glGetUniformLocation(mainShader.ID, "attLinear"), attLinear);
     glUniform1f(glGetUniformLocation(mainShader.ID, "attQuadratic"), attQuadratic);
     
-    // Parâmetros do fog
+    // Configura parâmetros do fog
     glUniform1i(glGetUniformLocation(mainShader.ID, "fogEnabled"), fogEnabled);
     glUniform3fv(glGetUniformLocation(mainShader.ID, "fogColor"), 1, value_ptr(fogColor));
     glUniform1f(glGetUniformLocation(mainShader.ID, "fogDensity"), fogDensity);
@@ -476,11 +528,16 @@ void System::render() {
     glUniform1f(glGetUniformLocation(mainShader.ID, "fogEnd"), fogEnd);
     glUniform1i(glGetUniformLocation(mainShader.ID, "fogType"), fogType);
     
-    glUniform1i(glGetUniformLocation(mainShader.ID, "isProjectile"), false); // objetos da cena não são projéteis
+    // Configura propriedades do material (valores padrão, podem ser alterados por objeto)
+    glUniform3f(glGetUniformLocation(mainShader.ID, "Ka"), 0.1f, 0.1f, 0.1f); // coeficiente ambiente
+    glUniform3f(glGetUniformLocation(mainShader.ID, "Kd"), 0.8f, 0.8f, 0.8f); // coeficiente difuso
+    glUniform3f(glGetUniformLocation(mainShader.ID, "Ks"), 1.0f, 1.0f, 1.0f); // coeficiente especular
+    glUniform1f(glGetUniformLocation(mainShader.ID, "Ns"), 32.0f);            // expoente especular (shininess)
+    glUniform1i(glGetUniformLocation(mainShader.ID, "isProjectile"), false);  // objetos da cena não são projéteis
     glUniform3f(glGetUniformLocation(mainShader.ID, "objectColor"), 1.0f, 1.0f, 1.0f);
     
-    for (const auto& obj : sceneObjects) { // renderiza cada objeto da cena
-        obj->render(mainShader);
+    for (const auto& sceneObject : sceneObjects) { // renderiza cada objeto da cena
+        sceneObject->render(mainShader);
     }
     
     // Render projeteis
@@ -519,6 +576,14 @@ void System::updateProjeteis() {
                                 [](const unique_ptr<Projetil>& projetil) {
                                     return !projetil->isActive();
                                 }), projeteis.end());
+}
+
+
+// Atualiza as animações dos objetos
+void System::updateAnimations() {
+    for (auto& obj : sceneObjects) {
+        obj->updateAnimation(deltaTime);
+    }
 }
 
 
@@ -569,6 +634,12 @@ void System::checkCollisions() {
         }
 
         for (auto sceneObject = sceneObjects.begin(); sceneObject != sceneObjects.end();) {
+            // Ignora colisão com a pista
+            if ((*sceneObject)->name == "Pista") {
+                ++sceneObject;
+                continue;
+            }
+            
             float distance;
             
             // Calcular próxima posição do projétil para verificação de colisão

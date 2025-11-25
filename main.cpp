@@ -4,8 +4,7 @@
 /***        Alunos: Ian Rossetti Boniatti e Eduardo Tropea        ***/
 
 /*** Fontes:
-                * GRAU A de Fundamentos de CGR
-                * GRAU B de Fundamentos de CG
+                * GRAU A de Fundamentos de CGR e GRAU B de Fundamentos de CG
                 * Exemplo SaberThoot
                 * UML dos slides "Modelagem 3D"
                 * pseudos códigos dos slides de CGR
@@ -19,9 +18,11 @@
 using namespace std;
 
 int main() {
-    cout << "    Visualizador de Modelos 3D - CGR    " << endl;    cout << endl;
+    cout << endl;
+    cout << "    Visualizador de Modelos 3D - CGR    " << endl;
+    cout << endl;
 
-    System system;  // Instancia o sistema (janela, OpenGL, Shaders, cena, etc)
+    System system;  // Instancia o sistema (onde teremos janela, OpenGL, Shaders, cena, etc)
 
     // inicializa a GLFW (janela, contexto, callbacks, etc - na apresentação ver System.cpp)
     if (!system.initializeGLFW()) {
@@ -39,13 +40,21 @@ int main() {
         return EXIT_FAILURE;
     }
 
+    // Carrega configurações da cena (câmera, luz, fog) do arquivo de configuração
+    if (!system.loadSystemConfiguration()) {
+        cerr << "Falha ao carregar configuracoes da cena (camera, luz, fog)" << endl;
+        return EXIT_FAILURE;
+    }
+
     // Carrega os objetos da cena (ver System.cpp)
     if (!system.loadSceneObjects()) {
         cerr << "Falha ao carregar objetos da cena" << endl;
         return EXIT_FAILURE;
     }
 
-    cout << "Sistema inicializado com sucesso" << endl;    cout << endl;
+    cout << endl;
+    cout << "Sistema inicializado com sucesso" << endl;
+    cout << endl;
 
     cout << "Controles:" << endl;
     cout << "  WASD/Setas: Mover camera" << endl;
@@ -62,8 +71,9 @@ int main() {
         system.deltaTime = currentFrame - system.lastFrame; // Tempo entre frames para movimentação
         system.lastFrame = currentFrame;
 
-        system.processInput();  // Processa entrada do usuário
-                                // (teclado, mouse, etc - ver System.cpp)
+        system.processInput();  // Processa entrada do usuário (teclado, mouse, etc - ver System.cpp)
+
+        system.updateAnimations();  // Atualiza animações dos objetos
 
         system.updateProjeteis();   // Atualiza posição dos projéteis (ver System.cpp)
 

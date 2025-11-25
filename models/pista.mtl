@@ -1,0 +1,7 @@
+# Material da Pista
+newmtl material_da_pista
+Ka 0.3 0.3 0.3
+Kd 1.0 1.0 1.0
+Ks 0.6 0.6 0.6
+Ns 32
+map_Kd textures/asfalto_ar.jpg
