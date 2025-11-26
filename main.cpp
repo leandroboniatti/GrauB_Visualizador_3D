@@ -1,4 +1,4 @@
-/***                  GRAU B - Visualizador 3D                    ***/
+/***         GRAU B - Visualizador 3D com Iluminação Phong        ***/
 /*** Computação Gráfica em Tempo Real - Jogos Digitais - Unisinos ***/
 /***          Visualizador de Modelos 3D com OpenGL 4+            ***/
 /***        Alunos: Ian Rossetti Boniatti e Eduardo Tropea        ***/
@@ -68,12 +68,12 @@ int main() {
     while (!glfwWindowShouldClose(system.window)) {
         
         float currentFrame = glfwGetTime(); // Tempo atual em segundos desde que a GLFW foi inicializada 
-        system.deltaTime = currentFrame - system.lastFrame; // Tempo entre frames para movimentação
-        system.lastFrame = currentFrame;
+        system.deltaTime = currentFrame - system.lastFrame; // Tempo entre frames para movimentação dos
+        system.lastFrame = currentFrame;                    // projéteis e demais objetos animados
 
         system.processInput();  // Processa entrada do usuário (teclado, mouse, etc - ver System.cpp)
 
-        system.updateAnimations();  // Atualiza animações dos objetos
+        system.updateAnimations();  // Atualiza animações dos objetos (ver System.cpp)
 
         system.updateProjeteis();   // Atualiza posição dos projéteis (ver System.cpp)
 

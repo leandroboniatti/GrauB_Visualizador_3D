@@ -21,7 +21,7 @@ System::System() : window(nullptr),
                    lastX(SCREEN_WIDTH  / 2.0f),
                    lastY(SCREEN_HEIGHT / 2.0f),
                    lightPos(0.0f, 10.0f, 5.0f),
-                   lightColor(1.0f, 1.0f, 1.0f),
+                   lightIntensity(1.0f, 1.0f, 1.0f),
                    attConstant(1.0f),
                    attLinear(0.045f),
                    attQuadratic(0.0075f),
@@ -124,8 +124,7 @@ bool System::initializeOpenGL() {
 }
 
 
-// Alteramos para o Grau B - Iluminação de Phong e texturas
-// Carrega os shaders
+// Alteramos para o Grau B - inclusão da Iluminação de Phong e mapeamento de texturas obtidas a partir do arquivo
 bool System::loadShaders() {
     // Código fonte do Vertex Shader com iluminação de Phong
     string vertexShaderSource = R"(
@@ -136,24 +135,23 @@ bool System::loadShaders() {
         
         out vec2 textureCoord;    // Coordenadas de textura do vértice
         out vec3 elementPosition; // No VS representa a posição do vértice no world space   // antes era fragPos
-        out vec3 normal;          // Vetor normal no world space
+        out vec3 worldNormal;          // Vetor normal no world space
 
-        uniform mat4 model;
-        uniform mat4 view;
-        uniform mat4 projection;
+        uniform mat4 model;        // Matriz que aplica as transformações ao objeto (translação, rotação, escala)
+        uniform mat4 view;         // Matriz de visualização da câmera (posição, direção, etc.)
+        uniform mat4 projection;   // Matriz de projeção escolhida (perspectiva ou ortográfica)
         uniform bool isProjectile; // flag para diferenciar projéteis de objetos da cena
         
         void main() {
 
-            vec4 worldPos = model * vec4(coordenadasDaGeometria, 1.0);  // Posição dos vértices antes da projeção (world space)
+            vec4 worldPos = model * vec4(coordenadasDaGeometria, 1.0);  // Posição dos vértices antes de view e da projeção (world space)
             elementPosition = worldPos.xyz;                             // Converte vec4 para vec3
 
             gl_Position = projection * view * worldPos;                 // Posição final do vértice após todas as transformações
             
-            normal = mat3(transpose(inverse(model))) * coordenadasDaNormal; // transforma a normal para o world space
+            worldNormal = mat3(transpose(inverse(model))) * coordenadasDaNormal; // transforma a normal para o world space
                                                                             // usando transposta da inversa da matriz de modelo
-
-
+                                                                            // fonte: LearnOpenGL.com
             // Passa coordenadas de textura
             if (!isProjectile) { textureCoord = coordenadasDaTextura; }
             else { textureCoord = vec2(0.0, 0.0); } // valor padrão para projéteis
@@ -169,13 +167,16 @@ bool System::loadShaders() {
 		// "coordenadasDaTextura"   recebe as informações que estão no local 1 -> definidas em glVertexAttribPointer(1, xxxxxxxx);
         // "coordenadasDaNormal"    recebe as informações que estão no local 2 -> definidas em glVertexAttribPointer(2, xxxxxxxx);
     // Outputs do Vertex Shader:
-        // "elementPosition"     enviará ao pipeline a posição do vértice no "world space"
-        // "normal"       enviará ao pipeline a normal do vértice no "world space"
-		// "textureCoord" enviará ao pipeline a textura de uma posição específica
-		// "gl_Position"  é uma variável específica do GLSL que recebe a posição final do vertice processado após todas as transformações
+        // "elementPosition" enviará ao pipeline a posição do vértice no "world space"
+        // "worldNormal"     enviará ao pipeline a normal do vértice no "world space"
+		// "textureCoord"    enviará ao pipeline a textura de uma posição específica
+		// "gl_Position"     é uma variável específica do GLSL que recebe a posição final do vertice processado após todas as transformações
 
 
 	// Código fonte do Fragment Shader com modelo de Phong completo
+    // Iluminação de Phong realiza o cálculo das componentes ambiente, difusa e especular da luz
+    // utilizando as propriedades do material e da luz definidas no System e enviadas via uniforms
+    // para processamento de cada fragmento no fragment shader
     string fragmentShaderSource = R"(
         #version 400 core
         out vec4 FragColor;     // Cor final do fragmento - output do Fragment Shader
@@ -183,7 +184,7 @@ bool System::loadShaders() {
         // Inputs do Fragment Shader - outputs do Vertex Shader
         in vec2 textureCoord;     // Coordenadas de textura
         in vec3 elementPosition;  // No FS representa a posição do fragmento // antes era fragPos
-        in vec3 normal;           // NORMAL INTERPOLADA pelo pipeline - // normal do fragmento
+        in vec3 worldNormal;      // NORMAL INTERPOLADA pelo pipeline - // normal do fragmento
         
         // Propriedades do material
         uniform vec3 Ka;   // Coeficiente ambiente
@@ -193,21 +194,21 @@ bool System::loadShaders() {
         
         // Propriedades da luz
         uniform vec3 lightPos;      // Posição da luz
-        uniform vec3 lightColor;    // Cor da luz
+        uniform vec3 lightIntensity;    // Intensidade/Cor da luz
         uniform vec3 viewPos;       // Posição da câmera
         
-        // Coeficientes de atenuação da luz
-        uniform float attConstant;  // Atenuação constante
-        uniform float attLinear;    // Atenuação linear
-        uniform float attQuadratic; // Atenuação quadrática
+        // Constantes de atenuação da fonte de luz
+        uniform float attConstante;  // Atenuação constante  (c1 nos slides de iluminação)
+        uniform float attLinear;     // Atenuação linear     (c2 nos slides de iluminação)
+        uniform float attQuadratica; // Atenuação quadrática (c3 nos slides de iluminação)
         
         // Parâmetros do fog
-        uniform bool fogEnabled;    // Flag para ligar/desligar o fog
+        uniform bool  fogEnabled;   // Flag para ligar/desligar o fog
         uniform vec3  fogColor;     // Cor do fog
         uniform float fogDensity;   // Densidade do fog (para fog exponencial)
         uniform float fogStart;     // Início do fog (para fog linear)
         uniform float fogEnd;       // Fim do fog (para fog linear)
-        uniform int fogType;        // 0=linear, 1=exponencial, 2=exponencial²
+        uniform int   fogType;      // 0=linear, 1=exponencial, 2=exponencial²
         
         // Texturas
         uniform sampler2D diffuseMap;   // Mapa de textura difusa
@@ -217,30 +218,31 @@ bool System::loadShaders() {
         
         void main() { // processamento de cada fragmento
             
-            vec3 norm = normalize(normal); // normaliza a normal (interpolada) para cálculos de iluminação
+            vec3 norm = normalize(worldNormal); // normaliza a WorldNormal (interpolada) para cálculos de iluminação
             
             // Cor base do material (textura ou cor sólida)
-            vec3 baseColor = objectColor;
+            vec3 baseColor;
             if (!isProjectile && hasDiffuseMap) { baseColor = texture(diffuseMap, textureCoord).rgb; }
+            else { baseColor = objectColor; }
             
-            // CÁLCULO DA ATENUAÇÃO DA LUZ
+            // CÁLCULO DA ATENUAÇÃO DA LUZ -> fatt = min { 1/(c1 + c2*d + c3*d²) } de acordo com os slides
             float distance = length(lightPos - elementPosition);
-            float attenuation = 1.0 / (attConstant + attLinear * distance + 
-                                      attQuadratic * (distance * distance));
+            float attenuation = 1.0 / (attConstante + attLinear * distance + attQuadratica * (distance * distance));
+            attenuation = min(attenuation, 1.0);    // garante que a atenuação não ultrapasse 1.0
 
-            // CÁLCULO DA COMPONENTE AMBIENTE
-            vec3 ambient = Ka * lightColor * baseColor;
+            // CÁLCULO DA COMPONENTE AMBIENTE de acordo com os slides
+            vec3 ambient = Ka * lightIntensity * baseColor;
 
             // CÁLCULO DA COMPONENTE DIFUSA
             vec3 lightDir = normalize(lightPos - elementPosition);
             float diff = max(dot(norm, lightDir), 0.0);
-            vec3 diffuse = Kd * diff * attenuation * lightColor * baseColor;
+            vec3 diffuse = Kd * diff * attenuation * lightIntensity * baseColor;
             
             // CÁLCULO DA COMPONENTE ESPECULAR (reflexo brilhante - não usa baseColor)
             vec3 viewDir = normalize(viewPos - elementPosition);
             vec3 reflectDir = reflect(-lightDir, norm);
             float spec = pow(max(dot(viewDir, reflectDir), 0.0), Ns);
-            vec3 specular = Ks * spec * attenuation * lightColor;
+            vec3 specular = Ks * spec * attenuation * lightIntensity;
             
             // COR FINAL DO FRAGMENTO (SEM FOG) - Phong: Ambient + Diffuse + Specular
             vec3 finalFragmentColor = ambient + diffuse + specular;
@@ -262,7 +264,7 @@ bool System::loadShaders() {
                 finalFragmentColor = mix(fogColor, finalFragmentColor, fogFactor); // Interpola entre a cor do objeto e a cor do fog
             }
             
-            FragColor = vec4(finalFragmentColor, 1.0); // envia a cor final do fragmento para o pipeline
+            FragColor = vec4(finalFragmentColor, 1.0); // envia a cor final do fragmento para o pipeline ()
         }
     )";
     
@@ -305,9 +307,9 @@ bool System::loadSystemConfiguration() {
         }
         else if (keyword == "LIGHT") {
             sline >> lightPos.x >> lightPos.y >> lightPos.z
-                  >> lightColor.x >> lightColor.y >> lightColor.z;
+                  >> lightIntensity.x >> lightIntensity.y >> lightIntensity.z;
             cout << "Luz configurada para a posicao: (" << lightPos.x << ", " << lightPos.y << ", " << lightPos.z << ")";
-            cout << " e Intensidade(Cor): (" << lightColor.x << ", " << lightColor.y << ", " << lightColor.z << ")" << endl;
+            cout << " e Intensidade(Cor): (" << lightIntensity.x << ", " << lightIntensity.y << ", " << lightIntensity.z << ")" << endl;
         }
         else if (keyword == "ATTENUATION") {
             sline >> attConstant >> attLinear >> attQuadratic;
@@ -512,7 +514,7 @@ void System::render() {
     
     // Configura uniforms de iluminação (modelo de Phong completo)
     glUniform3fv(glGetUniformLocation(mainShader.ID, "lightPos"), 1, value_ptr(lightPos));
-    glUniform3fv(glGetUniformLocation(mainShader.ID, "lightColor"), 1, value_ptr(lightColor));
+    glUniform3fv(glGetUniformLocation(mainShader.ID, "lightIntensity"), 1, value_ptr(lightIntensity));
     glUniform3fv(glGetUniformLocation(mainShader.ID, "viewPos"), 1, value_ptr(camera.Position));
     
     // Configura coeficientes de atenuação atmosférica

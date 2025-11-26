@@ -66,7 +66,7 @@ public:
     
     // Propriedades de iluminação
     vec3 lightPos;      // Posição da luz na cena
-    vec3 lightColor;    // Cor da luz
+    vec3 lightIntensity;    // Intensidade/cor da luz
     
     // Coeficientes de atenuação da luz
     float attConstant;       // Atenuação constante
