@@ -1,0 +1,178 @@
+===============================================================================
+                    FLUXOGRAMA SIMPLIFICADO DO PROGRAMA
+                         VISUALIZADOR 3D - GRAU B
+===============================================================================
+
+                         .---------------------------.
+                         |   INICIO DO PROGRAMA      |
+                         |  (main.cpp - Linha 16)    |
+                         '-------------+-------------'
+                                       |
+                                       v
+                         .---------------------------.
+                         | Instancia objeto System   |
+                         '-------------+-------------'
+                                       |
+                                       v
+            .---------------------------------------------------.
+            |         FASE 1: INICIALIZACAO DO SISTEMA          |
+            +---------------------------------------------------+
+            |  [1] Inicializa GLFW                              |
+            |      - Cria janela 1024x768                       |
+            |      - Configura callbacks (mouse, teclado)       |
+            +---------------------------------------------------+
+            |  [2] Inicializa OpenGL                            |
+            |      - Carrega funcoes (GLAD)                     |
+            |      - Ativa Depth Test, Blending                 |
+            +---------------------------------------------------+
+            |  [3] Carrega Shaders                              |
+            |      - Vertex Shader + Fragment Shader            |
+            +---------------------------------------------------+
+            |  [4] Carrega Configuracoes da Cena                |
+            |      - Camera (posicao, direcao, FOV)             |
+            |      - Luz (posicao, intensidade, atenuacao)      |
+            |      - Fog (cor, densidade, tipo)                 |
+            +---------------------------------------------------+
+            |  [5] Carrega Objetos 3D                           |
+            |      - Le arquivo Configurador_Cena.txt           |
+            |      - Carrega modelos .obj com texturas          |
+            |      - Cria malhas e buffers (VBO, VAO, EBO)      |
+            '----------------------+----------------------------'
+                                   |
+                                   v
+    .-------------------------------------------------------------------.
+    |                  FASE 2: LOOP PRINCIPAL (Game Loop)               |
+    |                     Executa ate fechar janela                     |
+    +===================================================================+
+    |                                                                   |
+    |    .--------------------------------------------------------.     |
+    |    | [A] Calcula deltaTime                                  |     |
+    |    |     Tempo decorrido entre frames                       |     |
+    |    '------------------------+-------------------------------'     |
+    |                             |                                     |
+    |                             v                                     |
+    |    .--------------------------------------------------------.     |
+    |    | [B] Processa Input do Usuario                          |     |
+    |    |     - WASD/Setas: Move camera                          |     |
+    |    |     - Mouse: Rotaciona camera                          |     |
+    |    |     - Scroll: Zoom (FOV)                               |     |
+    |    |     - Espaco: Dispara projetil                         |     |
+    |    |     - ESC: Fecha programa                              |     |
+    |    '------------------------+-------------------------------'     |
+    |                             |                                     |
+    |                             v                                     |
+    |    .--------------------------------------------------------.     |
+    |    | [C] Atualiza Animacoes                                 |     |
+    |    |     Atualiza transformacoes dos objetos animados       |     |
+    |    '------------------------+-------------------------------'     |
+    |                             |                                     |
+    |                             v                                     |
+    |    .--------------------------------------------------------.     |
+    |    | [D] Atualiza Projeteis                                 |     |
+    |    |     Move projeteis usando velocidade * deltaTime       |     |
+    |    '------------------------+-------------------------------'     |
+    |                             |                                     |
+    |                             v                                     |
+    |    .--------------------------------------------------------.     |
+    |    | [E] Verifica Colisoes                                  |     |
+    |    |     Detecta colisao projetil x objetos eliminaveis     |     |
+    |    '------------------------+-------------------------------'     |
+    |                             |                                     |
+    |                             v                                     |
+    |    .--------------------------------------------------------.     |
+    |    | [F] Renderiza Cena                                     |     |
+    |    |     - Limpa buffers (cor + profundidade)               |     |
+    |    |     - Calcula matrizes View e Projection               |     |
+    |    |     - Para cada objeto:                                |     |
+    |    |       * Calcula matriz Model                           |     |
+    |    |       * Envia uniforms para shader                     |     |
+    |    |       * Aplica iluminacao Phong                        |     |
+    |    |       * Renderiza malha (glDrawElements)               |     |
+    |    '------------------------+-------------------------------'     |
+    |                             |                                     |
+    |                             v                                     |
+    |    .--------------------------------------------------------.     |
+    |    | [G] Swap Buffers & Poll Events                         |     |
+    |    |     Exibe frame e processa eventos de janela           |     |
+    |    '------------------------+-------------------------------'     |
+    |                             |                                     |
+    |                             v                                     |
+    |              .------------------------------.                     |
+    |              |   Janela foi fechada?       |                     |
+    |              '----+-------------------+----'                     |
+    |                   |                   |                           |
+    |                  NAO                 SIM                          |
+    |                   |                   |                           |
+    |                   '---------.         |                           |
+    '-----------------------------+---------+---------------------------'
+                                  |         |
+                                  v         |
+                    (volta ao inicio do loop)|
+                                            |
+                                            v
+                              .----------------------------.
+                              |   FASE 3: FINALIZACAO    |
+                              +----------------------------+
+                              | System.shutdown()          |
+                              | - Deleta VAOs/VBOs/EBOs    |
+                              | - Libera texturas          |
+                              | - Destroi shaders          |
+                              | - Fecha janela GLFW        |
+                              | - Termina GLFW             |
+                              '-------------+--------------'
+                                            |
+                                            v
+                              .----------------------------.
+                              |        FIM DO PROGRAMA     |
+                              '----------------------------'
+
+
+RESUMO DAS ETAPAS PRINCIPAIS
+=============================
+
+1. INICIALIZAÇÃO
+   - Cria janela OpenGL (GLFW)
+   - Carrega funções OpenGL (GLAD)
+   - Compila shaders
+   - Configura câmera, luz e fog
+   - Carrega modelos 3D (.obj)
+
+2. LOOP PRINCIPAL (Game Loop)
+   - Captura entrada do usuário (WASD, mouse, espaço)
+   - Atualiza estado dos objetos animados
+   - Move projéteis e detecta colisões
+   - Renderiza cena com iluminação Phong
+   - Repete até fechar janela
+
+3. FINALIZAÇÃO
+   - Libera recursos OpenGL
+   - Fecha janela
+
+
+COMPONENTES DO SISTEMA
+======================
+
+System
+  ├── GLFWwindow (janela)
+  ├── Camera (câmera)
+  ├── Shader (shaders)
+  ├── sceneObjects (vector de Object3D)
+  ├── projeteis (vector de Projetil)
+  ├── Configurações de iluminação (luz, fog)
+  └── Controles de entrada (mouse, teclado)
+
+Object3D
+  ├── Mesh (malha)
+  ├── Groups (grupos com materiais)
+  ├── Faces (triângulos)
+  ├── Textures (texturas)
+  └── Transformações (posição, rotação, escala)
+
+
+CONTROLES DO USUÁRIO
+=====================
+WASD/Setas: Mover câmera
+Mouse: Olhar ao redor
+Scroll: Zoom
+ESPAÇO: Atirar projétil
+ESC: Sair
