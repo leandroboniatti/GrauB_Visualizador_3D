@@ -135,7 +135,7 @@ bool System::loadShaders() {
         
         out vec2 textureCoord;    // Coordenadas de textura do vértice
         out vec3 elementPosition; // No VS representa a posição do vértice no world space   // antes era fragPos
-        out vec3 worldNormal;          // Vetor normal no world space
+        out vec3 worldNormal;     // Vetor normal no world space
 
         uniform mat4 model;        // Matriz que aplica as transformações ao objeto (translação, rotação, escala)
         uniform mat4 view;         // Matriz de visualização da câmera (posição, direção, etc.)
@@ -354,11 +354,12 @@ bool System::loadSceneObjects() {
                                                            // se carregar com sucesso, prossegue para configurar o objeto com os demais parâmetros
             object->setPosition(sceneObject.position);     // posiciona o objeto na cena
             object->setRotation(sceneObject.rotation);     // rotaciona o objeto na cena
+            object->baseRotation = sceneObject.rotation;   // guarda rotação inicial para animação
             object->setScale(sceneObject.scale);           // escala o objeto na cena
             object->setEliminable(sceneObject.eliminable); // define se o objeto pode ser eliminado ou não
 
             // Se o objeto é o veículo, carrega a curva de animação 
-            if (sceneObject.name == "Veiculo") {
+            if (sceneObject.name == "Veiculo" || sceneObject.name == "Conversivel") {
                 // Busca os parâmetros da pista para aplicar à curva
                 vec3 trackPos(0.0f), trackRot(0.0f), trackScale(1.0f);
                 for (const auto& obj : sceneObjectsInfos) {
@@ -371,7 +372,7 @@ bool System::loadSceneObjects() {
                 }
                 
                 if (object->loadAnimationCurve("models/curva_BSpline.txt", trackPos, trackRot, trackScale)) {
-                    object->setAnimationSpeed(2.0f); // Velocidade da animação
+                    object->setAnimationSpeed(4.0f); // Velocidade da animação
                     //cout << "Animacao carregada para o " << sceneObject.name << endl;
                 }
             }
@@ -429,13 +430,18 @@ vector<ObjectInfo> System::readObjectsInfos() {
               >> objectInfo.position.x  // posição X, inicial, do objeto na cena
               >> objectInfo.position.y  // posição Y, inicial, do objeto na cena
               >> objectInfo.position.z  // posição Z, inicial, do objeto na cena
-              >> objectInfo.rotation.x  // rotação no eixo X, inicial, do objeto na cena
-              >> objectInfo.rotation.y  // rotação no eixo Y, inicial, do objeto na cena
-              >> objectInfo.rotation.z  // rotação no eixo Z, inicial, do objeto na cena
+              >> objectInfo.rotation.x  // rotação no eixo X, inicial, do objeto na cena (em graus)
+              >> objectInfo.rotation.y  // rotação no eixo Y, inicial, do objeto na cena (em graus)
+              >> objectInfo.rotation.z  // rotação no eixo Z, inicial, do objeto na cena (em graus)
               >> objectInfo.scale.x     // escala no eixo X, inicial, do objeto na cena
               >> objectInfo.scale.y     // escala no eixo Y, inicial, do objeto na cena
               >> objectInfo.scale.z     // escala no eixo Z, inicial, do objeto na cena
               >> objectInfo.eliminable; // se o objeto pode ser eliminado (1 = sim, 0 = não)
+        
+        // Converte rotações de graus para radianos
+        objectInfo.rotation.x = glm::radians(objectInfo.rotation.x);
+        objectInfo.rotation.y = glm::radians(objectInfo.rotation.y);
+        objectInfo.rotation.z = glm::radians(objectInfo.rotation.z);
               //>> objectInfo.texturePath;  // caminho da textura do objeto (Grau A - removido no Grau B)
                                             // agora as texturas são carregadas automaticamente através do arquivo .mtl associado ao .obj
 
@@ -493,7 +499,7 @@ void System::processInput() {
 // Renderiza a cena
 void System::render() {
     
-    vec3 bgColor = fogEnabled ? fogColor : vec3(0.7f, 1.0f, 0.7f); // Usa a cor do fog como cor de fundo quando fog estiver ativo
+    vec3 bgColor = fogEnabled ? fogColor : vec3(0.85f, 1.0f, 0.85f); // Usa a cor do fog como cor de fundo quando fog estiver ativo
 
     // Limpa o buffer de cor e o buffer de profundidade
     glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f); // define a cor de fundo

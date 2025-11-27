@@ -1,0 +1,340 @@
+@startuml GrauB_Visualizador3D
+!theme plain
+skinparam dpi 150
+skinparam classAttributeIconSize 0
+skinparam backgroundColor white
+skinparam defaultFontSize 10
+skinparam classBackgroundColor white
+skinparam classBorderColor black
+skinparam arrowColor black
+skinparam noteBackgroundColor #D4EDDA
+skinparam noteBorderColor #28A745
+
+' ====== ENUMERAÇÕES ======
+enum Camera_Movement {
+  FORWARD
+  BACKWARD
+  LEFT
+  RIGHT
+}
+
+' ====== ESTRUTURAS ======
+class BoundingBox <<struct>> {
+  + pontoMinimo: vec3
+  + pontoMaximo: vec3
+  --
+  + expand(point): void
+  + center(): vec3
+  + size(): vec3
+  + radius(): float
+  + getCorners(corners[]): void
+}
+
+class ObjectInfo <<struct>> {
+  + name: string
+  + modelPath: string
+  + position: vec3
+  + rotation: vec3
+  + scale: vec3
+  + eliminable: bool
+}
+
+' ====== CLASSE PRINCIPAL ======
+class System {
+  + window: GLFWwindow*
+  + sceneObject: Object3D*
+  + camera: Camera
+  + mainShader: Shader
+  + sceneObjects: vector<unique_ptr<Object3D>>
+  + projeteis: vector<unique_ptr<Projetil>>
+  + lightPos: vec3
+  + lightIntensity: vec3
+  + attConstant: float
+  + attLinear: float
+  + attQuadratic: float
+  + fogColor: vec3
+  + fogDensity: float
+  + fogStart: float
+  + fogEnd: float
+  + fogType: int
+  + fogEnabled: bool
+  + deltaTime: float
+  + lastFrame: float
+  + firstMouse: bool
+  + lastX: float
+  + lastY: float
+  + {static} SCREEN_WIDTH: unsigned int
+  + {static} SCREEN_HEIGHT: unsigned int
+  --
+  + System()
+  + ~System()
+  + initializeGLFW(): bool
+  + initializeOpenGL(): bool
+  + loadShaders(): bool
+  + loadSceneObjects(): bool
+  + processInput(): void
+  + render(): void
+  + shutdown(): void
+  + disparo(): void
+  + updateProjeteis(): void
+  + updateAnimations(): void
+  + checkCollisions(): void
+}
+
+' ====== RENDERIZAÇÃO ======
+class Shader {
+  + ID: unsigned int
+  --
+  + Shader()
+  + ~Shader()
+  + loadShaders(vertexSource, fragmentSource): bool
+  - compileShader(source, shaderType): unsigned int
+  - checkCompileErrors(shader, type): bool
+  - cleanup(): void
+}
+
+' ====== FÍSICA ======
+class Projetil {
+  + position: vec3
+  + direction: vec3
+  + speed: float
+  + lifetime: float
+  + maxLifetime: float
+  + active: bool
+  - VAO: unsigned int
+  - VBO: unsigned int
+  --
+  + Projetil()
+  + Projetil(startPos, dir, speed, maxLife)
+  + ~Projetil()
+  + update(deltaTime): void
+  + draw(shader): void
+  + isActive(): bool
+  + reflect(normal): void
+  + desativar(): void
+  + setupMesh(): void
+  + cleanup(): void
+}
+
+class Camera {
+  + Position: vec3
+  + Front: vec3
+  + Up: vec3
+  + Right: vec3
+  + WorldUp: vec3
+  + Yaw: float
+  + Pitch: float
+  + MovementSpeed: float
+  + MouseSensitivity: float
+  + Zoom: float
+  --
+  + Camera(position, up, yaw, pitch)
+  + GetViewMatrix(): mat4
+  + ProcessKeyboard(direction, deltaTime): void
+  + ProcessMouseMovement(xoffset, yoffset, constrainPitch): void
+  + ProcessMouseScroll(yoffset): void
+  - updateCameraVectors(): void
+}
+
+' ====== OBJETOS 3D ======
+class Object3D {
+  + mesh: Mesh
+  + transform: mat4
+  + position: vec3
+  + rotation: vec3
+  + scale: vec3
+  + eliminable: bool
+  + name: string
+  + animationPoints: vector<vec3>
+  + currentCurveIndex: int
+  + curveTimer: float
+  + isAnimated: bool
+  + animationSpeed: float
+  + baseRotation: vec3
+  --
+  + Object3D()
+  + Object3D(objName)
+  + ~Object3D()
+  + loadObject(objFilePath): bool
+  + render(shader): void
+  + setPosition(pos): void
+  + setRotation(rot): void
+  + setScale(scl): void
+  + setEliminable(canEliminate): void
+  + isEliminable(): bool
+  + loadAnimationCurve(curveFilePath, trackPosition, trackRotation, trackScale): bool
+  + updateAnimation(deltaTime): void
+  + setAnimationSpeed(speed): void
+  + getTransformedBoundingBox(): BoundingBox
+  + rayIntersect(rayOrigin, rayDirection, distance): bool
+  + updateTransform(): void
+}
+
+class Mesh {
+  + vertices: vector<vec3>
+  + texCoords: vector<vec2>
+  + normals: vector<vec3>
+  + groups: vector<Group>
+  + materials: map<string, Material>
+  + boundingBox: BoundingBox
+  --
+  + Mesh()
+  + ~Mesh()
+  + readObjectModel(path): bool
+  + render(shader): void
+  + cleanup(): void
+  + calculateBoundingBox(): void
+  + rayIntersect(rayOrigin, rayDirection, distance): bool
+}
+
+class Group {
+  + name: string
+  + faces: vector<Face>
+  + material: Material
+  + VAO: unsigned int
+  + VBO: unsigned int
+  + textureID: unsigned int
+  + vertices: vector<float>
+  + vertexCount: int
+  --
+  + Group()
+  + Group(groupName)
+  + ~Group()
+  + addFace(face): void
+  + setupBuffers(objVertices, objTexCoords, objNormals): void
+  + render(shader): void
+  + loadMaterialTexture(modelDirectory): void
+  + cleanup(): void
+}
+
+class Face {
+  + vertexIndices: vector<unsigned int>
+  + textureIndices: vector<unsigned int>
+  + normalIndices: vector<unsigned int>
+  --
+  + Face()
+  + Face(vIndices, tIndices, nIndices)
+  + triangulate(): vector<Face>
+}
+
+class Material {
+  + name: string
+  + Ka: vec3
+  + Kd: vec3
+  + Ks: vec3
+  + Ns: float
+  + map_Kd: string
+  --
+  + Material()
+  + Material(materialName, ambient, diffuse, specular, shininess, texture)
+  + hasTexture(): bool
+}
+
+' ====== CARREGAMENTO ======
+class OBJReader {
+  {static} + readFileOBJ(path, vertices, texCoords, normals, groups, materials): bool
+  {static} + readFileMTL(path, materials): bool
+  {static} + split(str, delimiter): vector<string>
+  {static} + trim(str): string
+  {static} + getDirectory(filepath): string
+  {static} + parseFace(faceStr, face): void
+  {static} + parseVertice(line, vertices): void
+  {static} + parseTexCoord(line, texCoords): void
+}
+
+class Texture {
+  {static} - textureCache: map<string, unsigned int>
+  --
+  {static} + loadTexture(path): unsigned int
+  {static} + clearCache(): void
+}
+
+' ====== RELACIONAMENTOS ======
+System "1" *-- "*" Projetil : gerencia
+System "1" *-- "1" Shader : usa
+System "1" *-- "1" Camera : contém
+System "1" *-- "*" Object3D : gerencia
+
+Object3D "1" *-- "1" Mesh : possui
+Object3D ..> BoundingBox : <<usa>>
+
+Mesh "1" *-- "*" Group : divide em
+Mesh "1" *-- "1" BoundingBox : possui
+Mesh "1" *-- "*" Material : armazena
+
+Group "1" *-- "1" Material : aplica
+Group "1" *-- "*" Face : composto de
+
+Camera ..> Camera_Movement : <<usa>>
+
+OBJReader ..> Mesh : <<cria>>
+OBJReader ..> Material : <<parseia>>
+OBJReader ..> Group : <<preenche>>
+
+Texture ..> Group : <<carrega textura>>
+
+note left of System
+  **Classe Central**
+  Gerencia janela, entrada,
+  renderização, game loop,
+  iluminação com atenuação,
+  fog (3 tipos), animações
+  e sistema de colisões
+end note
+
+note top of Object3D
+  **Hierarquia de Objetos**
+  Object3D → Mesh → Group → Face
+  Cada Group tem Material + Textura
+  Face define triângulos (índices)
+  
+  **Animação:** Suporta curvas B-Spline
+  **Colisão:** BoundingBox + Ray Intersection
+end note
+
+note bottom of Material
+  **Modelo de Phong**
+  Ka: Ambiente
+  Kd: Difuso
+  Ks: Especular
+  Ns: Shininess
+  map_Kd: Textura difusa
+end note
+
+note right of BoundingBox
+  **AABB (Axis-Aligned Bounding Box)**
+  Usado para detecção de colisões
+  e ray-casting (seleção de objetos)
+end note
+
+note bottom of Projetil
+  **Sistema de Projéteis**
+  - Tempo de vida limitado
+  - Reflexão em superfícies
+  - Renderização com geometria própria
+  - Detecção de colisões
+end note
+
+note top of Camera
+  **Sistema de Câmera**
+  - Controle FPS (WASD + Mouse)
+  - Ângulos de Euler (Yaw/Pitch)
+  - Zoom variável
+  - Velocidade ajustável
+end note
+
+note bottom of Texture
+  **Sistema de Texturas**
+  - Cache para evitar recarregamento
+  - Suporte a múltiplos formatos
+  - Carregamento via stb_image
+end note
+
+note top of Shader
+  **Sistema de Shaders**
+  - Shader unificado para toda cena
+  - Compilação e verificação de erros
+  - Suporta Phong + Fog + Atenuação
+end note
+
+@enduml

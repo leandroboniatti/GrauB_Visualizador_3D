@@ -26,9 +26,10 @@ public:
     // Animation support
     vector<vec3> animationPoints;   // Pontos da curva de animação
     int currentCurveIndex;          // Índice atual na curva
-    float curveProgress;            // Progresso fracionário entre pontos
+    float curveTimer;               // Timer fracionário para transição entre pontos (0.0 a 1.0+)
     bool isAnimated;          // Flag para indicar se o objeto está animado
     float animationSpeed;     // Velocidade da animação (pontos por update)
+    vec3 baseRotation;        // Rotação base do modelo (para ajustar orientação inicial)
     
     // Texture support
     //unsigned int textureID;

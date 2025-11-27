@@ -12,9 +12,10 @@ Object3D::Object3D()
 	  eliminable(true), 
 	  name(""),
 	  currentCurveIndex(0),
-	  curveProgress(0.0f),
+	  curveTimer(0.0f),
 	  isAnimated(false),
-	  animationSpeed(1.0f)
+	  animationSpeed(1.0f),
+	  baseRotation(0.0f)
 	//  textureID(0),
 	//  hasTexture(false)
 	{ updateTransform(); }
@@ -27,9 +28,10 @@ Object3D::Object3D(string& objName)
 	  eliminable(true),
 	  name(objName),
 	  currentCurveIndex(0),
-	  curveProgress(0.0f),
+	  curveTimer(0.0f),
 	  isAnimated(false),
-	  animationSpeed(1.0f)
+	  animationSpeed(1.0f),
+	  baseRotation(0.0f)
 	//  textureID(0),
 	//  hasTexture(false)
 	{ updateTransform(); }
@@ -96,10 +98,14 @@ void Object3D::updateTransform() {
 	// translação
 	transform = translate(transform, position);
     
-	// Aplica rotações
-	transform = rotate(transform, rotation.x, vec3(1.0f, 0.0f, 0.0f));
-	transform = rotate(transform, rotation.y, vec3(0.0f, 1.0f, 0.0f));
-	transform = rotate(transform, rotation.z, vec3(0.0f, 0.0f, 1.0f));
+	// Aplica rotações - Ordem alterada para: Yaw (Y) -> Pitch (X) -> Roll (Z)	// Matematicamente: T * Ry * Rx * Rz * v
+	// Isso resolveu problemas de inversão da inclinação, à esquerda ou a direita da pista.
+	// primeiro inclinar (X) e depois girar (Y) garantiu que a inclinação seja sempre relativa ao corpo do carro.
+	// fontes: https://learnopengl.com/Getting-started/Transformations (Matrix multiplication order)
+	// 		   https://learnopengl.com/Getting-started/Camera (Euler Angles)
+	transform = rotate(transform, rotation.y, vec3(0.0f, 1.0f, 0.0f));	// Yaw
+	transform = rotate(transform, rotation.x, vec3(1.0f, 0.0f, 0.0f));	// Pitch
+	transform = rotate(transform, rotation.z, vec3(0.0f, 0.0f, 1.0f));	// Roll
     
 	// Aplica escala
 	transform = glm::scale(transform, scale);
@@ -199,35 +205,55 @@ bool Object3D::loadAnimationCurve(const string& curveFilePath,
 }
 
 
-// Atualiza a posição do objeto ao longo da curva
+// Atualiza a posição do objeto ao longo da curva de animação com base no deltaTime
+// Realiza calculos de orientação do objeto (inclinação/pitch e direção/yaw) para seguir a curva
 void Object3D::updateAnimation(float deltaTime) {
-	if (!isAnimated || animationPoints.empty()) return;
+
+	if (!isAnimated || animationPoints.empty()) return; // sem animação ou sem pontos na curva
 	
-	// Avança no progresso baseado na velocidade (pontos por segundo)
-	curveProgress += animationSpeed * deltaTime * 10.0f; // 10 pontos/segundo como base
+	// Acumula o progresso temporal para transição entre pontos da curva em curveTimer
+	// Exemplo: com animationSpeed=2.0 e deltaTime=0.016s (60 FPS), avança 0.32 por frame (32% do caminho entre pontos)
+	curveTimer += animationSpeed * deltaTime * 10.0f;
 	
-	// Atualiza o índice quando passar de 1.0
-	while (curveProgress >= 1.0f) {
-		currentCurveIndex = (currentCurveIndex + 1) % animationPoints.size();
-		curveProgress -= 1.0f;
+	// curveTimer é mantido no intervalo entre 0.0 e 1.0 pelo loop while
+	while (curveTimer >= 1.0f) {
+		currentCurveIndex = (currentCurveIndex + 1) % animationPoints.size(); // Avança para o próximo ponto usando módulo (%) para criar loop infinito na curva
+																			  // Se animationPoints tem 10 elementos (índices 0-9): quando currentCurveIndex=9, (9+1)%10=0, voltando ao início
+		
+		curveTimer -= 1.0f;	// Subtrai 1.0 mas preserva o excedente para manter precisão temporal do proximo frame
 	}
 	
-	// Atualiza posição
-	vec3 currentPos = animationPoints[currentCurveIndex];
+	// recupera a próxima posição na curva -> proximo ponto e atualiza a posição do objeto
+	vec3 targetPos = animationPoints[currentCurveIndex]; // para onde o objeto deve ir
+	setPosition(targetPos);	// atualiza a posição do objeto para o ponto alvo
 	
-	// Calcula direção para o próximo ponto para orientar o objeto
+	// Calcula direção para o ponto posterior ao novo ponto, para orientar o objeto
 	int nextIndex = (currentCurveIndex + 1) % animationPoints.size();
-	vec3 nextPos = animationPoints[nextIndex];
-	vec3 direction = nextPos - currentPos;
+	vec3 nextPos = animationPoints[nextIndex]; // posição seguinte ao ponto alvo
+	vec3 direction = nextPos - targetPos;
 	
-	if (length(direction) > 0.001f) {
-		direction = normalize(direction);
-		// Calcula rotação Y baseada na direção
-		float angleY = atan2(direction.x, direction.z);
-		setRotation(vec3(0.0f, angleY, 0.0f));
+	if (length(direction) > 0.001f) {	// Evita divisões por zero ou instabilidade
+		direction = normalize(direction);	// normaliza o vetor direction, substituindo seu valor original por 1 e mantendo a mesma direção.
+		
+		float rotationY = atan2(direction.x, direction.z); // Calcula rotação Y (yaw) baseada na direção
+		
+		// Calcula rotação X (pitch) baseada na inclinação vertical da pista
+		float horizontalDistance = sqrt(direction.x * direction.x + direction.z * direction.z);
+		float rotationX = 0.0f;
+		
+		// Evita divisões por zero ou instabilidade em movimentos puramente verticais
+		if (horizontalDistance > 0.001f) {
+			rotationX = -atan2(direction.y, horizontalDistance); // calcula a rotação X (pitch) baseada na inclinação
+		}
+		
+		// Aplica rotação calculada + rotação base do modelo (rotação base do arquivo de configuração de cena)
+		setRotation(vec3(rotationX + baseRotation.x, rotationY + baseRotation.y, baseRotation.z)); 
+			// tínhamos problemas de inversão da inclinação à esquerda ou a direita, resolvemos com a troca da ordem de
+			// aplicação das rotações no updateTransform(), pitch (inclinação) sendo aplicado antes do yaw (direção)
+			// primeiro inclinar (X) e depois girar (Y) garantiu que a inclinação seja sempre relativa ao corpo do carro.
+			// fontes: https://learnopengl.com/Getting-started/Transformations (Matrix multiplication order)
+			// 		   https://learnopengl.com/Getting-started/Camera (Euler Angles)
 	}
-	
-	setPosition(currentPos);
 }
 
 
