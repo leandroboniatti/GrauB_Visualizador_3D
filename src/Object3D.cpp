@@ -98,17 +98,20 @@ void Object3D::updateTransform() {
 	// translação
 	transform = translate(transform, position);
     
-	// Aplica rotações - Ordem alterada para: Yaw (Y) -> Pitch (X) -> Roll (Z)	// Matematicamente: T * Ry * Rx * Rz * v
+	// Aplica rotações
+	// Ordem alterada para: Yaw -> Pitch ->  Roll
+	// Matematicamente: transform = Rz * Rx * Ry * T (multiplicação matricial)	
+	// Antes a ordem era: Pitch -> Yaw -> Roll que resultava transform = Rz * Ry * Rx * T
 	// Isso resolveu problemas de inversão da inclinação, à esquerda ou a direita da pista.
-	// primeiro inclinar (X) e depois girar (Y) garantiu que a inclinação seja sempre relativa ao corpo do carro.
 	// fontes: https://learnopengl.com/Getting-started/Transformations (Matrix multiplication order)
 	// 		   https://learnopengl.com/Getting-started/Camera (Euler Angles)
-	transform = rotate(transform, rotation.y, vec3(0.0f, 1.0f, 0.0f));	// Yaw
-	transform = rotate(transform, rotation.x, vec3(1.0f, 0.0f, 0.0f));	// Pitch
-	transform = rotate(transform, rotation.z, vec3(0.0f, 0.0f, 1.0f));	// Roll
+	transform = rotate(transform, rotation.y, vec3(0.0f, 1.0f, 0.0f));	// Yaw   (Ry)
+	transform = rotate(transform, rotation.x, vec3(1.0f, 0.0f, 0.0f));	// Pitch (Rx)
+	transform = rotate(transform, rotation.z, vec3(0.0f, 0.0f, 1.0f));	// Roll  (Rz)
     
-	// Aplica escala
-	transform = glm::scale(transform, scale);
+	// Matematicamente ficou: transform = Rz * Rx * Ry * T
+
+	transform = glm::scale(transform, scale); // aplica escala
 }
 
 
@@ -168,12 +171,13 @@ bool Object3D::loadAnimationCurve(const string& curveFilePath,
 		istringstream iss(line);
 		vec3 point;
 		
+		// Lê ponto (x, y, z) e aplica transformações da pista
 		if (iss >> point.x >> point.y >> point.z) {
-			// Aplica transformações da pista ao ponto
+
 			// 1. Escala
 			point = point * trackScale;
 			
-			// 2. Rotação (apenas Y por simplicidade, se necessário adicionar X e Z)
+			// 2. Rotação 
 			if (length(trackRotation) > 0.001f) {
 				mat4 rotMatrix = mat4(1.0f);
 				rotMatrix = rotate(rotMatrix, trackRotation.x, vec3(1.0f, 0.0f, 0.0f));
@@ -237,20 +241,21 @@ void Object3D::updateAnimation(float deltaTime) {
 		
 		float rotationY = atan2(direction.x, direction.z); // Calcula rotação Y (yaw) baseada na direção
 		
-		// Calcula rotação X (pitch) baseada na inclinação vertical da pista
+		// Calcula a distância horizontal
 		float horizontalDistance = sqrt(direction.x * direction.x + direction.z * direction.z);
 		float rotationX = 0.0f;
 		
-		// Evita divisões por zero ou instabilidade em movimentos puramente verticais
-		if (horizontalDistance > 0.001f) {
+		if (horizontalDistance > 0.001f) { // Evita divisões por zero ou instabilidade em movimentos puramente verticais
 			rotationX = -atan2(direction.y, horizontalDistance); // calcula a rotação X (pitch) baseada na inclinação
 		}
 		
 		// Aplica rotação calculada + rotação base do modelo (rotação base do arquivo de configuração de cena)
 		setRotation(vec3(rotationX + baseRotation.x, rotationY + baseRotation.y, baseRotation.z)); 
 			// tínhamos problemas de inversão da inclinação à esquerda ou a direita, resolvemos com a troca da ordem de
-			// aplicação das rotações no updateTransform(), pitch (inclinação) sendo aplicado antes do yaw (direção)
-			// primeiro inclinar (X) e depois girar (Y) garantiu que a inclinação seja sempre relativa ao corpo do carro.
+			// aplicação das rotações (matricialmente) no updateTransform(), pitch (inclinação) sendo aplicado antes do yaw (direção)
+			// primeiro inclinar e depois girar garantiu que a inclinação seja sempre relativa ao corpo do carro.
+			// Ordem alterada para: Yaw -> Pitch ->  Roll
+			// Matematicamente: transform = Rz * Rx * Ry * T (multiplicação matricial)	
 			// fontes: https://learnopengl.com/Getting-started/Transformations (Matrix multiplication order)
 			// 		   https://learnopengl.com/Getting-started/Camera (Euler Angles)
 	}

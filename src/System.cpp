@@ -124,7 +124,7 @@ bool System::initializeOpenGL() {
 }
 
 
-// Alteramos para o Grau B - inclusão da Iluminação de Phong e mapeamento de texturas obtidas a partir do arquivo
+// Alteramos para o Grau B - inclusão da Iluminação de Phong e mapeamento de texturas obtidas a partir do arquivo MTL
 bool System::loadShaders() {
     // Código fonte do Vertex Shader com iluminação de Phong
     string vertexShaderSource = R"(
@@ -364,13 +364,14 @@ bool System::loadSceneObjects() {
                 vec3 trackPos(0.0f), trackRot(0.0f), trackScale(1.0f);
                 for (const auto& obj : sceneObjectsInfos) {
                     if (obj.name == "Pista") {
-                        trackPos = obj.position;
-                        trackRot = obj.rotation;
-                        trackScale = obj.scale;
+                        trackPos = obj.position;    // posição da pista será aplicada à curva do Veículo
+                        trackRot = obj.rotation;    // rotação da pista será aplicada à curva do Veículo
+                        trackScale = obj.scale;     // escala da pista será aplicada à curva do Veículo
                         break;
                     }
                 }
                 
+                // Carrega a curva de animação do veículo aplicando os parâmetros da pista (posição, rotação e escala)
                 if (object->loadAnimationCurve("models/curva_BSpline.txt", trackPos, trackRot, trackScale)) {
                     object->setAnimationSpeed(4.0f); // Velocidade da animação
                     //cout << "Animacao carregada para o " << sceneObject.name << endl;
@@ -379,7 +380,6 @@ bool System::loadSceneObjects() {
 
             sceneObjects.push_back(move(object));   // adiciona o objeto 3D criado à lista de objetos 3D da cena
                                                     // o vetor sceneObjects é um atributo da classe System, gerado no arquivo System.h
-            //cout << "Objeto " << sceneObject.name << " carregado do arquivo " << sceneObject.modelPath << endl;
         }
         else {
             cout << "Falha ao carregar objeto " << sceneObject.name
