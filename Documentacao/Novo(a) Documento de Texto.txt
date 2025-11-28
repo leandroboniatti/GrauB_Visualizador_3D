@@ -1,0 +1,5 @@
+otimizar para impressão em A4 paisagem, mantendo as informações atuais e mantendo uma cópia do arquivo anterior
+
+fluxo visual básico, só com diagrama de classes e métodos utilizados,  para implementação do modelo de iluminação completo, desde a leitura dos parametros de configuração em configurador_cena.txt
+
+fluxo visual básico, só com diagrama de classes e métodos utilizados,  para leitura do arquivo obj, desde system
