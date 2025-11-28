@@ -3,8 +3,7 @@
 /***          Visualizador de Modelos 3D com OpenGL 4+            ***/
 /***        Alunos: Ian Rossetti Boniatti e Eduardo Tropea        ***/
 
-/*** Fontes:
-                * GRAU A de Fundamentos de CGR e GRAU B de Fundamentos de CG
+/*** Fontes:    * GRAU A de Fundamentos de CGR e GRAU B de Fundamentos de CG
                 * Exemplo SaberThoot
                 * UML dos slides "Modelagem 3D"
                 * pseudos códigos dos slides de CGR
